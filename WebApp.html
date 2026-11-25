@@ -153,15 +153,18 @@
   </div>
 
   <script>
-    const INITIAL_KEY = <?= JSON.stringify(initialKey || "") ?>;
-    const EXEC_URL = <?= JSON.stringify(execUrl || "") ?>;
+    function cleanStr(v) {
+      return String(v || "").trim().replace(/^["']+|["']+$/g, "");
+    }
+    const INITIAL_KEY = cleanStr(<?!= JSON.stringify(initialKey || "") ?>);
+    const EXEC_URL = cleanStr(<?!= JSON.stringify(execUrl || "") ?>);
     const INITIAL_STATE = <?!= initialStateJson || "null" ?>;
 
     let accessKey = INITIAL_KEY || (function () {
-      try { return localStorage.getItem("pf_access_key") || ""; } catch (_) { return ""; }
+      try { return cleanStr(localStorage.getItem("pf_access_key") || ""); } catch (_) { return ""; }
     })();
-    if (INITIAL_KEY) {
-      try { localStorage.setItem("pf_access_key", INITIAL_KEY); } catch (_) {}
+    if (accessKey) {
+      try { localStorage.setItem("pf_access_key", accessKey); } catch (_) {}
     }
 
     let state = null;

@@ -39,7 +39,8 @@ assert.strictEqual(buildAlertKey("2026-11", "Food", "100"), "PF_ALERT_2026-11_FO
 // WebApp access key guard
 assert.strictEqual(isValidWebAppKey("pf_mido_9f83c7a2d4e1b6085c3a91e7", "pf_mido_9f83c7a2d4e1b6085c3a91e7"), true);
 assert.strictEqual(isValidWebAppKey("  pf_mido_9f83c7a2d4e1b6085c3a91e7 ", "pf_mido_9f83c7a2d4e1b6085c3a91e7"), true);
+assert.strictEqual(isValidWebAppKey('"pf_mido_9f83c7a2d4e1b6085c3a91e7"', "pf_mido_9f83c7a2d4e1b6085c3a91e7"), true);
 assert.strictEqual(isValidWebAppKey("", "pf_mido_9f83c7a2d4e1b6085c3a91e7"), false);
 assert.strictEqual(isValidWebAppKey("wrong_key", "pf_mido_9f83c7a2d4e1b6085c3a91e7"), false);
 
-console.log("16 assertions passed (budgets, alerts & WebApp key auth).");
+console.log("17 assertions passed (budgets, alerts & WebApp key auth).");

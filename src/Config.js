@@ -416,7 +416,7 @@ function getMasterSpreadsheet_() {
 }
 
 function isValidWebAppKey(candidate, expectedKey) {
-  const c = String(candidate || "").trim();
+  const c = String(candidate || "").trim().replace(/^["']+|["']+$/g, "");
   const e = String(expectedKey || "").trim();
   if (!c || !e || c.length !== e.length) return false;
   let diff = 0;
