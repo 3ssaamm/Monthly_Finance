@@ -74,6 +74,8 @@ function doPost(e) {
       result = apiLogTransaction({ ...payload, key });
     } else if (action === "logLoan") {
       result = apiLogLoan({ ...payload, key });
+    } else if (action === "logInvestment") {
+      result = apiLogInvestment({ ...payload, key });
     } else if (action === "sendEmail") {
       assertWebAppAuth_(key, false);
       result = { ok: true, ...sendMobileLinkEmail(payload.execUrl) };
@@ -139,6 +141,24 @@ function apiGetDashboardState(key, isSidebar) {
     });
   }
 
+  const invSheet = ss.getSheetByName(PF_CONFIG.SHEETS.INVESTMENTS);
+  const investments = [];
+  if (invSheet) {
+    const invVals = invSheet.getRange("A5:F7").getValues();
+    invVals.forEach(r => {
+      const asset = String(r[0] || "").trim();
+      if (asset) {
+        investments.push({
+          asset,
+          units: r[1] === "" ? null : Number(r[1] || 0),
+          principal: Number(r[2] || 0),
+          marketValue: Number(r[3] || 0),
+          profit: Number(r[4] || 0)
+        });
+      }
+    });
+  }
+
   return {
     monthKey: activeMonthKey,
     today: Utilities.formatDate(new Date(), PF_CONFIG.TIMEZONE, "yyyy-MM-dd"),
@@ -150,8 +170,10 @@ function apiGetDashboardState(key, isSidebar) {
     categories: PF_CONFIG.CATEGORIES,
     txTypes: PF_CONFIG.TX_TYPES,
     wallets: PF_CONFIG.WALLETS,
+    assets: PF_CONFIG.PERSONAL_ASSETS,
     budgets: statuses,
-    people
+    people,
+    investments
   };
 }
 
@@ -258,6 +280,82 @@ function apiLogLoan(payload) {
     person,
     amount,
     direction,
+    state: apiGetDashboardState(payload.key, Boolean(payload.isSidebar))
+  };
+}
+
+function apiLogInvestment(payload) {
+  if (!payload) throw new Error("Missing investment payload.");
+  assertWebAppAuth_(payload.key, Boolean(payload.isSidebar));
+
+  const ss = getMasterSpreadsheet_();
+  const invSheet = ss.getSheetByName(PF_CONFIG.SHEETS.INVESTMENTS);
+  if (!invSheet) throw new Error("Investments sheet not found.");
+
+  const asset = String(payload.asset || "").trim();
+  if (!asset) throw new Error("Asset is required.");
+
+  const mode = String(payload.mode || "Deposit").trim();
+  const dateStr = payload.date || Utilities.formatDate(new Date(), PF_CONFIG.TIMEZONE, "yyyy-MM-dd");
+  const dObj = parseDateStrict(dateStr, PF_CONFIG.TIMEZONE);
+  const isoDate = dObj ? formatDateIso(dObj) : Utilities.formatDate(new Date(), PF_CONFIG.TIMEZONE, "yyyy-MM-dd");
+
+  let loggedAmount = 0;
+  if (mode === "Deposit" || mode === "Withdrawal") {
+    const amount = evalSimpleMathExpr(payload.amount);
+    if (!isFinite(amount) || amount <= 0) {
+      throw new Error("Invalid transfer amount.");
+    }
+    loggedAmount = amount;
+    const wallet = String(payload.wallet || "Bank / InstaPay").trim();
+    const notes = String(payload.notes || "Logged via Quick Entry").trim();
+
+    const colB = invSheet.getRange("B13:B500").getValues();
+    let nextRow = 13;
+    for (let i = 0; i < colB.length; i++) {
+      if (String(colB[i][0] || "").trim() === "") {
+        nextRow = 13 + i;
+        break;
+      }
+      nextRow = 13 + i + 1;
+    }
+    invSheet.getRange(nextRow, 1, 1, 7).setValues([[
+      `=IF(B${nextRow}="","",ROW()-12)`,
+      isoDate,
+      asset,
+      mode,
+      amount,
+      wallet,
+      notes
+    ]]);
+    invSheet.getRange(nextRow, 2).setNumberFormat("yyyy-mm-dd");
+    invSheet.getRange(nextRow, 5).setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
+  }
+
+  // Optional market value / USD units update
+  if (payload.newMarketValue !== undefined && String(payload.newMarketValue).trim() !== "") {
+    const val = evalSimpleMathExpr(payload.newMarketValue);
+    if (!isFinite(val) || val < 0) throw new Error("Invalid market value / USD units.");
+    const assetRows = invSheet.getRange("A5:A7").getValues();
+    for (let i = 0; i < assetRows.length; i++) {
+      if (String(assetRows[i][0] || "").trim() === asset) {
+        const targetRow = 5 + i;
+        if (asset === "USD Cash") {
+          invSheet.getRange(targetRow, 2).setValue(val);
+        } else {
+          invSheet.getRange(targetRow, 4).setValue(val);
+        }
+        break;
+      }
+    }
+  }
+
+  SpreadsheetApp.flush();
+  return {
+    ok: true,
+    asset,
+    mode,
+    amount: loggedAmount,
     state: apiGetDashboardState(payload.key, Boolean(payload.isSidebar))
   };
 }

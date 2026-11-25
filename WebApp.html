@@ -83,8 +83,9 @@
       </div>
 
       <div class="tabs">
-        <button class="tab active" onclick="switchTab('tx', this)">💸 Expense / Income</button>
-        <button class="tab" onclick="switchTab('loan', this)">🤝 Loan / Split</button>
+        <button class="tab active" onclick="switchTab('tx', this)">💸 Expense</button>
+        <button class="tab" onclick="switchTab('loan', this)">🤝 Loan</button>
+        <button class="tab" onclick="switchTab('invest', this)">📈 Invest</button>
         <button class="tab" onclick="switchTab('budgets', this)">🎯 Budgets</button>
       </div>
 
@@ -142,7 +143,43 @@
         <button class="btn" id="loanBtn" onclick="submitLoan()">Save Loan Entry</button>
       </div>
 
-      <!-- TAB 3: BUDGETS & LOANS OVERVIEW -->
+      <!-- TAB 3: INVESTMENTS -->
+      <div id="tab-invest" class="card hidden">
+        <label>Asset</label>
+        <div class="chips" id="assetChips"></div>
+
+        <label>Action</label>
+        <select id="invMode" onchange="toggleInvFields()">
+          <option value="Value Only">Update Current Value Only</option>
+          <option value="Deposit">Deposit (Bank / Cash → Investment)</option>
+          <option value="Withdrawal">Withdrawal (Investment → Bank / Cash)</option>
+        </select>
+
+        <div id="invTransferFields" class="hidden">
+          <label>Transfer Amount (EGP)</label>
+          <input id="invAmount" type="text" inputmode="decimal" placeholder="e.g. 2000">
+
+          <label>Wallet</label>
+          <div class="chips" id="invWalletChips"></div>
+
+          <label>Notes</label>
+          <input id="invNotes" type="text" placeholder="Optional note">
+        </div>
+
+        <label id="invMarketLabel">New Market Value (EGP) — or USD amount for USD Cash</label>
+        <input id="invNewValue" type="text" inputmode="decimal" placeholder="Leave blank to keep current value">
+
+        <label>Date</label>
+        <input id="invDate" type="date">
+
+        <button class="btn" id="invBtn" onclick="submitInvest()">Save Investment Update</button>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Current Portfolio</div>
+        <div id="investList"></div>
+      </div>
+
+      <!-- TAB 4: BUDGETS & LOANS OVERVIEW -->
       <div id="tab-budgets" class="card hidden">
         <div id="budgetList"></div>
         <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;">
@@ -171,6 +208,8 @@
     let selectedType = "Expense";
     let selectedCat = "Entertainment";
     let selectedWallet = "Bank / InstaPay";
+    let selectedAsset = "Thndr FI Funds";
+    let selectedInvWallet = "Bank / InstaPay";
 
     function fmt(n) {
       return "EGP " + Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -195,11 +234,19 @@
     }
 
     function switchTab(tab, btn) {
-      ["tx", "loan", "budgets"].forEach(t => {
+      ["tx", "loan", "invest", "budgets"].forEach(t => {
         document.getElementById("tab-" + t).classList.toggle("hidden", t !== tab);
       });
       document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
+    }
+
+    function toggleInvFields() {
+      const mode = document.getElementById("invMode").value;
+      document.getElementById("invTransferFields").classList.toggle("hidden", mode === "Value Only");
+      document.getElementById("invMarketLabel").textContent = selectedAsset === "USD Cash"
+        ? "New Total USD Amount (e.g. 150)"
+        : "New Total Market Value (EGP)";
     }
 
     function renderChips(containerId, items, current, onPick) {
@@ -226,6 +273,7 @@
 
       if (!document.getElementById("txDate").value) document.getElementById("txDate").value = s.today;
       if (!document.getElementById("loanDate").value) document.getElementById("loanDate").value = s.today;
+      if (!document.getElementById("invDate").value) document.getElementById("invDate").value = s.today;
 
       renderChips("typeChips", ["Expense", "Income", "Reimbursement", "Cash Withdrawal", "CC Bill Payment"], selectedType, v => {
         selectedType = v;
@@ -239,6 +287,24 @@
         selectedWallet = v;
         renderState(state);
       });
+      renderChips("assetChips", s.assets || ["USD Cash", "Thndr Cloud", "Thndr FI Funds"], selectedAsset, v => {
+        selectedAsset = v;
+        toggleInvFields();
+        renderState(state);
+      });
+      renderChips("invWalletChips", ["Bank / InstaPay", "Cash"], selectedInvWallet, v => {
+        selectedInvWallet = v;
+        renderState(state);
+      });
+      toggleInvFields();
+
+      const iList = document.getElementById("investList");
+      iList.innerHTML = (s.investments || []).map(inv =>
+        `<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;">
+          <span>${inv.asset}${inv.units !== null ? " ($" + inv.units + ")" : ""}</span>
+          <span><strong>${fmt(inv.marketValue)}</strong> <span style="color:#6b7280;font-size:11px;">(${inv.profit >= 0 ? "+" : ""}${fmt(inv.profit)})</span></span>
+        </div>`
+      ).join("") || "<div style='font-size:12px;color:#6b7280;'>No investments</div>";
 
       const dl = document.getElementById("peopleList");
       dl.innerHTML = "";
@@ -308,6 +374,7 @@
           if (action === "getState") runner.apiGetDashboardState(accessKey, false);
           else if (action === "logTransaction") runner.apiLogTransaction({ ...payload, key: accessKey });
           else if (action === "logLoan") runner.apiLogLoan({ ...payload, key: accessKey });
+          else if (action === "logInvestment") runner.apiLogInvestment({ ...payload, key: accessKey });
           else invokeFetch();
         } else {
           invokeFetch();
@@ -388,6 +455,50 @@
         .catch(err => {
           btn.disabled = false;
           btn.textContent = "Save Loan Entry";
+          showToast("❌ " + (err.message || err), "danger");
+        });
+    }
+
+    function submitInvest() {
+      const btn = document.getElementById("invBtn");
+      const mode = document.getElementById("invMode").value;
+      const amount = document.getElementById("invAmount").value.trim();
+      const newMarketValue = document.getElementById("invNewValue").value.trim();
+      const notes = document.getElementById("invNotes").value.trim();
+      const date = document.getElementById("invDate").value;
+
+      if ((mode === "Deposit" || mode === "Withdrawal") && !amount) {
+        showToast("Enter transfer amount.", "danger");
+        return;
+      }
+      if (mode === "Value Only" && !newMarketValue) {
+        showToast("Enter the new value.", "danger");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Saving...";
+      callBackend("logInvestment", {
+        asset: selectedAsset,
+        mode,
+        amount,
+        wallet: selectedInvWallet,
+        notes,
+        newMarketValue,
+        date
+      })
+        .then(res => {
+          btn.disabled = false;
+          btn.textContent = "Save Investment Update";
+          document.getElementById("invAmount").value = "";
+          document.getElementById("invNewValue").value = "";
+          document.getElementById("invNotes").value = "";
+          renderState(res.state);
+          showToast(`✅ Updated ${res.asset} (${res.mode}).`, "ok");
+        })
+        .catch(err => {
+          btn.disabled = false;
+          btn.textContent = "Save Investment Update";
           showToast("❌ " + (err.message || err), "danger");
         });
     }

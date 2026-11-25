@@ -188,6 +188,8 @@ function setupTransactionsSheet_(sheet) {
   const typeRule = SpreadsheetApp.newDataValidation().requireValueInList(PF_CONFIG.TX_TYPES, true).setAllowInvalid(false).build();
   const catRule = SpreadsheetApp.newDataValidation().requireValueInList(PF_CONFIG.TX_CATEGORIES, true).setAllowInvalid(true).build();
   const walletRule = SpreadsheetApp.newDataValidation().requireValueInList(PF_CONFIG.WALLETS, true).setAllowInvalid(false).build();
+  const dateRule = SpreadsheetApp.newDataValidation().requireDate().setAllowInvalid(true).build();
+  sheet.getRange("B2:B1000").setDataValidation(dateRule);
   sheet.getRange("D2:D1000").setDataValidation(typeRule);
   sheet.getRange("E2:E1000").setDataValidation(catRule);
   sheet.getRange("G2:G1000").setDataValidation(walletRule);
@@ -237,10 +239,14 @@ function setupLoansSheet_(sheet) {
   sheet.getRange("A16:H16").setValues([["#", "Date", "Person", "Direction", "Amount (EGP)", "Wallet", "Notes", "_Loan_ID"]])
     .setFontWeight("bold").setBackground(C.HEADER);
 
+  const personRule = SpreadsheetApp.newDataValidation().requireValueInRange(sheet.getRange("A5:A12"), true).setAllowInvalid(true).build();
   const dirRule = SpreadsheetApp.newDataValidation().requireValueInList(PF_CONFIG.LOAN_DIRECTIONS, true).setAllowInvalid(false).build();
   const walRule = SpreadsheetApp.newDataValidation().requireValueInList(PF_CONFIG.LOAN_WALLETS, true).setAllowInvalid(false).build();
-  sheet.getRange("D17:D1000").setDataValidation(dirRule);
-  sheet.getRange("F17:F1000").setDataValidation(walRule);
+  const loanDateRule = SpreadsheetApp.newDataValidation().requireDate().setAllowInvalid(true).build();
+  sheet.getRange("B17:B500").setDataValidation(loanDateRule);
+  sheet.getRange("C17:C500").setDataValidation(personRule);
+  sheet.getRange("D17:D500").setDataValidation(dirRule);
+  sheet.getRange("F17:F500").setDataValidation(walRule);
   sheet.getRange("B17:B1000").setNumberFormat("yyyy-mm-dd");
   sheet.getRange("E17:E1000").setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
   sheet.getRange("H16:H1000").setFontColor(C.TEXT_MUTED).setFontSize(8);
@@ -254,27 +260,32 @@ function setupInvestmentsSheet_(sheet) {
   sheet.clear();
   const C = PF_CONFIG.COLORS;
 
-  sheet.getRange("A1:N1").merge()
-    .setValue("📈 Investments & Thndr — Personal Portfolio & Family Custodial Tracker")
+  sheet.getRange("A1:G1").merge()
+    .setValue("📈 Personal Investments — USD & Thndr Portfolio")
     .setFontWeight("bold").setFontSize(13).setBackground(C.PRIMARY).setFontColor("#ffffff");
-  sheet.getRange("A2:N2").merge()
-    .setValue("Left: Your personal investments (included in Net Worth). Right: Family custodial Thndr funds (excluded from personal Net Worth).")
+  sheet.getRange("A2:G2").merge()
+    .setValue("Track your personal USD & Thndr positions. Deposits/Withdrawals from Bank or Cash update Expected Bank/Cash automatically; edit yellow cells to update market value.")
     .setFontStyle("italic").setFontSize(9).setFontColor(C.TEXT_MUTED);
 
   sheet.getRange("A3:F3").merge().setValue("💼 Personal Investment Portfolio")
     .setFontWeight("bold").setFontSize(10).setBackground(C.PRIMARY_LIGHT);
-  sheet.getRange("H3:K3").merge().setValue("👨‍👩‍👧 Family Custodial Thndr (Separate)")
-    .setFontWeight("bold").setFontSize(10).setBackground(C.INFO_BG);
 
-  sheet.getRange("A4:F4").setValues([["Asset", "Units / USD", "Net Principal (EGP)", "Market Value (EGP)", "Profit (EGP)", "ROI %"]])
+  sheet.getRange("A4:F4").setValues([["Asset", "Units / USD", "Net Principal (EGP)", "Market Value (EGP)", "Total Profit (EGP)", "ROI %"]])
     .setFontWeight("bold").setBackground(C.HEADER);
-  sheet.getRange("H4:K4").setValues([["Person", "Net Transacted (EGP)", "Actual Value (EGP)", "Interest / Profit (EGP)"]])
-    .setFontWeight("bold").setBackground(C.HEADER);
+
+  const mkRow = (r, name, units, marketVal) => [
+    name,
+    units,
+    `=MAX(0,SUMIFS($E$13:$E$1000,$C$13:$C$1000,A${r},$D$13:$D$1000,"Deposit")-SUMIFS($E$13:$E$1000,$C$13:$C$1000,A${r},$D$13:$D$1000,"Withdrawal"))`,
+    marketVal,
+    `=D${r}+SUMIFS($E$13:$E$1000,$C$13:$C$1000,A${r},$D$13:$D$1000,"Withdrawal")-SUMIFS($E$13:$E$1000,$C$13:$C$1000,A${r},$D$13:$D$1000,"Deposit")`,
+    `=IF(SUMIFS($E$13:$E$1000,$C$13:$C$1000,A${r},$D$13:$D$1000,"Deposit")>0,E${r}/SUMIFS($E$13:$E$1000,$C$13:$C$1000,A${r},$D$13:$D$1000,"Deposit"),0)`
+  ];
 
   sheet.getRange("A5:F8").setValues([
-    ["USD Cash", 100, '=SUMIFS($E$13:$E$1000,$C$13:$C$1000,A5,$D$13:$D$1000,"Deposit")-SUMIFS($E$13:$E$1000,$C$13:$C$1000,A5,$D$13:$D$1000,"Withdrawal")', '=B5*GOOGLEFINANCE("CURRENCY:USDEGP")', "=D5-C5", "=IF(C5>0,E5/C5,0)"],
-    ["Thndr Cloud", "", '=SUMIFS($E$13:$E$1000,$C$13:$C$1000,A6,$D$13:$D$1000,"Deposit")-SUMIFS($E$13:$E$1000,$C$13:$C$1000,A6,$D$13:$D$1000,"Withdrawal")', 3071, "=D6-C6", "=IF(C6>0,E6/C6,0)"],
-    ["Thndr FI Funds", "", '=SUMIFS($E$13:$E$1000,$C$13:$C$1000,A7,$D$13:$D$1000,"Deposit")-SUMIFS($E$13:$E$1000,$C$13:$C$1000,A7,$D$13:$D$1000,"Withdrawal")', 23066, "=D7-C7", "=IF(C7>0,E7/C7,0)"],
+    mkRow(5, "USD Cash", 100, '=B5*GOOGLEFINANCE("CURRENCY:USDEGP")'),
+    mkRow(6, "Thndr Cloud", "", 0),
+    mkRow(7, "Thndr FI Funds", "", 23066),
     ["TOTAL PERSONAL", "", "=SUM(C5:C7)", "=SUM(D5:D7)", "=SUM(E5:E7)", "=IF(C8>0,E8/C8,0)"]
   ]);
   sheet.getRange("B5").setNumberFormat(PF_CONFIG.USD_FORMAT).setBackground(C.INPUT_BG);
@@ -283,39 +294,29 @@ function setupInvestmentsSheet_(sheet) {
   sheet.getRange("F5:F8").setNumberFormat("0.0%");
   sheet.getRange("A8:F8").setFontWeight("bold").setBackground(C.SUBHEADER);
 
-  sheet.getRange("H5:K8").setValues([
-    ["Dad", '=SUMIFS($L$13:$L$1000,$J$13:$J$1000,H5,$K$13:$K$1000,"Deposit")-SUMIFS($L$13:$L$1000,$J$13:$J$1000,H5,$K$13:$K$1000,"Withdraw")', 30911, "=J5-I5"],
-    ["Mum", '=SUMIFS($L$13:$L$1000,$J$13:$J$1000,H6,$K$13:$K$1000,"Deposit")-SUMIFS($L$13:$L$1000,$J$13:$J$1000,H6,$K$13:$K$1000,"Withdraw")', 71422, "=J6-I6"],
-    ["Abdo", '=SUMIFS($L$13:$L$1000,$J$13:$J$1000,H7,$K$13:$K$1000,"Deposit")-SUMIFS($L$13:$L$1000,$J$13:$J$1000,H7,$K$13:$K$1000,"Withdraw")', 0, "=J7-I7"],
-    ["TOTAL FAMILY", "=SUM(I5:I7)", "=SUM(J5:J7)", "=SUM(K5:K7)"]
-  ]);
-  sheet.getRange("J5:J7").setBackground(C.INPUT_BG);
-  sheet.getRange("I5:K8").setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
-  sheet.getRange("H8:K8").setFontWeight("bold").setBackground(C.SUBHEADER);
-
   sheet.getRange("A11:G11").merge().setValue("📥 Personal Investment Transactions")
     .setFontWeight("bold").setFontSize(10).setBackground(C.PRIMARY_LIGHT);
-  sheet.getRange("H11:N11").merge().setValue("📥 Family Custodial Thndr Transactions")
-    .setFontWeight("bold").setFontSize(10).setBackground(C.INFO_BG);
-
   sheet.getRange("A12:G12").setValues([["#", "Date", "Asset", "Action", "Amount (EGP)", "Wallet", "Notes"]])
     .setFontWeight("bold").setBackground(C.HEADER);
-  sheet.getRange("H12:N12").setValues([["#", "Date", "Person", "Action", "Amount (EGP)", "Notes", "_Src_ID"]])
-    .setFontWeight("bold").setBackground(C.HEADER);
 
-  const assetRule = SpreadsheetApp.newDataValidation().requireValueInList(PF_CONFIG.PERSONAL_ASSETS, true).setAllowInvalid(true).build();
+  const numFormulas = [];
+  for (let r = 13; r <= 500; r++) {
+    numFormulas.push([`=IF(B${r}="","",ROW()-12)`]);
+  }
+  sheet.getRange(13, 1, numFormulas.length, 1).setFormulas(numFormulas);
+
+  const dateRule = SpreadsheetApp.newDataValidation().requireDate().setAllowInvalid(true).build();
+  const assetRule = SpreadsheetApp.newDataValidation().requireValueInRange(sheet.getRange("A5:A7"), true).setAllowInvalid(true).build();
   const actRule = SpreadsheetApp.newDataValidation().requireValueInList(PF_CONFIG.INV_ACTIONS, true).setAllowInvalid(false).build();
   const walRule = SpreadsheetApp.newDataValidation().requireValueInList(PF_CONFIG.INV_WALLETS, true).setAllowInvalid(false).build();
+  sheet.getRange("B13:B500").setDataValidation(dateRule).setNumberFormat("yyyy-mm-dd");
   sheet.getRange("C13:C500").setDataValidation(assetRule);
   sheet.getRange("D13:D500").setDataValidation(actRule);
-  sheet.getRange("F13:F500").setDataValidation(walRule);
-  sheet.getRange("B13:B500").setNumberFormat("yyyy-mm-dd");
-  sheet.getRange("I13:I1000").setNumberFormat("yyyy-mm-dd");
   sheet.getRange("E13:E500").setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
-  sheet.getRange("L13:L1000").setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
+  sheet.getRange("F13:F500").setDataValidation(walRule);
 
   sheet.setFrozenRows(12);
-  [125, 100, 135, 135, 120, 120, 160, 135, 135, 135, 140, 120, 175, 125].forEach((w, i) => sheet.setColumnWidth(i + 1, w));
+  [75, 115, 145, 135, 135, 150, 240].forEach((w, i) => sheet.setColumnWidth(i + 1, w));
 }
 
 function setupDashboardSheet_(sheet) {
@@ -363,7 +364,7 @@ function setupDashboardSheet_(sheet) {
   sheet.getRange("E6:F6").merge().setFormula("=A6-C6");
   sheet.getRange("G6:H6").merge().setFormula('=IF($K$3>=1,0,MAX(0,(C18-C6))/MAX(1,DAY(EOMONTH(DATE(B3,MONTH(DATEVALUE(D3&" 1, "&B3)),1),0))-IF(TEXT(TODAY(),"yyyy-mm")=G3,DAY(TODAY()),0)))');
   sheet.getRange("I6:K6").merge().setFormula("=K10+K11");
-  sheet.getRange("L6:N6").merge().setFormula("=I6+'Investments & Thndr'!D8+'Loans & People'!D13-J20");
+  sheet.getRange("L6:N6").merge().setFormula("=I6+'Investments'!D8+'Loans & People'!D13-J20");
   sheet.getRange("A6:N6").setFontWeight("bold").setFontSize(12).setNumberFormat(PF_CONFIG.CURRENCY_FORMAT).setHorizontalAlignment("center").setBackground("#ffffff");
 
   // Left Panel: Category Budget vs Actual (Rows 8-18, Cols A-G)
@@ -427,8 +428,8 @@ function setupDashboardSheet_(sheet) {
     '-SUMIFS(Transactions!$F$2:$F,Transactions!$D$2:$D,"Cash Withdrawal")' +
     '+SUMIFS(\'Loans & People\'!$E$17:$E,\'Loans & People\'!$D$17:$D,"Repaid to Me",\'Loans & People\'!$F$17:$F,"Bank / InstaPay")' +
     '-SUMIFS(\'Loans & People\'!$E$17:$E,\'Loans & People\'!$D$17:$D,"Lent / Paid for Them",\'Loans & People\'!$F$17:$F,"Bank / InstaPay")' +
-    '+SUMIFS(\'Investments & Thndr\'!$E$13:$E,\'Investments & Thndr\'!$D$13:$D,"Withdrawal",\'Investments & Thndr\'!$F$13:$F,"Bank / InstaPay")' +
-    '-SUMIFS(\'Investments & Thndr\'!$E$13:$E,\'Investments & Thndr\'!$D$13:$D,"Deposit",\'Investments & Thndr\'!$F$13:$F,"Bank / InstaPay")';
+    '+SUMIFS(\'Investments\'!$E$13:$E,\'Investments\'!$D$13:$D,"Withdrawal",\'Investments\'!$F$13:$F,"Bank / InstaPay")' +
+    '-SUMIFS(\'Investments\'!$E$13:$E,\'Investments\'!$D$13:$D,"Deposit",\'Investments\'!$F$13:$F,"Bank / InstaPay")';
 
   const cashExpectedFormula =
     "='_Archive_Store'!B3" +
@@ -440,8 +441,8 @@ function setupDashboardSheet_(sheet) {
     '-SUMIFS(Transactions!$F$2:$F,Transactions!$D$2:$D,"Bank Deposit")' +
     '+SUMIFS(\'Loans & People\'!$E$17:$E,\'Loans & People\'!$D$17:$D,"Repaid to Me",\'Loans & People\'!$F$17:$F,"Cash")' +
     '-SUMIFS(\'Loans & People\'!$E$17:$E,\'Loans & People\'!$D$17:$D,"Lent / Paid for Them",\'Loans & People\'!$F$17:$F,"Cash")' +
-    '+SUMIFS(\'Investments & Thndr\'!$E$13:$E,\'Investments & Thndr\'!$D$13:$D,"Withdrawal",\'Investments & Thndr\'!$F$13:$F,"Cash")' +
-    '-SUMIFS(\'Investments & Thndr\'!$E$13:$E,\'Investments & Thndr\'!$D$13:$D,"Deposit",\'Investments & Thndr\'!$F$13:$F,"Cash")';
+    '+SUMIFS(\'Investments\'!$E$13:$E,\'Investments\'!$D$13:$D,"Withdrawal",\'Investments\'!$F$13:$F,"Cash")' +
+    '-SUMIFS(\'Investments\'!$E$13:$E,\'Investments\'!$D$13:$D,"Deposit",\'Investments\'!$F$13:$F,"Cash")';
 
   sheet.getRange("I10:N11").setValues([
     ["Bank / InstaPay", "='_Archive_Store'!B2", bankExpectedFormula, 16584.16, "=L10-K10", '=IF(ABS(M10)<0.05,"✅ Balanced","⚠️ Diff")'],
@@ -462,7 +463,7 @@ function setupDashboardSheet_(sheet) {
     '=SUMIFS(Transactions!$F$2:$F,Transactions!$C$2:$C,$G$3,Transactions!$D$2:$D,"Expense",Transactions!$G$2:$G,"Cash")',
     '=SUMIFS(Transactions!$F$2:$F,Transactions!$C$2:$C,$G$3,Transactions!$D$2:$D,"Expense",Transactions!$G$2:$G,"NBE Credit Card")',
     "='Loans & People'!D13",
-    "='Investments & Thndr'!D8"
+    "='Investments'!D8"
   ]]);
   sheet.getRange("J15:N15").setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
 
@@ -473,9 +474,9 @@ function setupDashboardSheet_(sheet) {
     .setFontWeight("bold").setFontSize(9).setBackground(C.HEADER);
 
   sheet.getRange("I19:N23").setValues([
-    ["Active Card Cycle", "='_NBE_Cache'!B2", "='_NBE_Cache'!B5", "USD Cash ($100)", "='Investments & Thndr'!D5", "='Investments & Thndr'!E5"],
-    ["Mido Card Share Due", "='_NBE_Cache'!B7", "='_NBE_Cache'!B4", "Thndr Cloud", "='Investments & Thndr'!D6", "='Investments & Thndr'!E6"],
-    ["Mido Next Forecast", "='_NBE_Cache'!B8", "Next Cycle Est.", "Thndr FI Funds", "='Investments & Thndr'!D7", "='Investments & Thndr'!E7"],
+    ["Active Card Cycle", "='_NBE_Cache'!B2", "='_NBE_Cache'!B5", "USD Cash ($100)", "='Investments'!D5", "='Investments'!E5"],
+    ["Mido Card Share Due", "='_NBE_Cache'!B7", "='_NBE_Cache'!B4", "Thndr Cloud", "='Investments'!D6", "='Investments'!E6"],
+    ["Mido Next Forecast", "='_NBE_Cache'!B8", "Next Cycle Est.", "Thndr FI Funds", "='Investments'!D7", "='Investments'!E7"],
     ["Total Bank Closing Bill", "='_NBE_Cache'!B6", "Full Card Statement", "Abdo Loan Owed", "='Loans & People'!D5", "='Loans & People'!F5"],
     ["Family Shares (Excl Mido)", "='_NBE_Cache'!B9", "='_NBE_Cache'!B10", "Dad & Others", "='Loans & People'!D13-'Loans & People'!D5", '=IF(M23>0,"⏳ Pending","✅ Settled")']
   ]);

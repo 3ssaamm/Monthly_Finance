@@ -30,7 +30,7 @@ const PF_CONFIG = {
     DASHBOARD: "Monthly Dashboard",
     TRANSACTIONS: "Transactions",
     LOANS: "Loans & People",
-    INVESTMENTS: "Investments & Thndr",
+    INVESTMENTS: "Investments",
     BUDGETS: "Budgets & Recurring",
     YEARLY: "Yearly & Analytics",
     NBE_CACHE: "_NBE_Cache",

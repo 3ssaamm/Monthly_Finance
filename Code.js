@@ -50,6 +50,14 @@ function onEdit(e) {
         numCell.setFormula(`=IF(B${row}="","",ROW()-16)`);
       }
     }
+  } else if (name === PF_CONFIG.SHEETS.INVESTMENTS) {
+    const row = e.range.getRow();
+    if (row >= 13) {
+      const numCell = sheet.getRange(row, 1);
+      if (!numCell.getFormula()) {
+        numCell.setFormula(`=IF(B${row}="","",ROW()-12)`);
+      }
+    }
   }
 }
 
