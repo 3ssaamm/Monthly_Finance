@@ -1,23 +1,109 @@
 /**
- * Web App & Sidebar API for Quick Mobile Entry + Live Budget Status Feedback.
+ * Web App, JSON API (doGet/doPost), Safari Mobile Quick-Entry & Email Link Helper.
  */
 
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile("WebApp")
+function getExpectedWebAppKey_() {
+  try {
+    if (typeof PropertiesService !== "undefined" && PropertiesService.getScriptProperties) {
+      const saved = PropertiesService.getScriptProperties().getProperty("PF_WEBAPP_KEY");
+      if (saved && String(saved).trim()) return String(saved).trim();
+    }
+  } catch (_) {}
+  return PF_CONFIG.DEFAULT_WEBAPP_KEY;
+}
+
+function assertWebAppAuth_(key, isSidebar) {
+  if (isSidebar === true) return;
+  if (!isValidWebAppKey(key, getExpectedWebAppKey_())) {
+    throw new Error("Unauthorized: invalid or missing Mobile Access Key.");
+  }
+}
+
+function resolveExecUrl_(optExecUrl) {
+  const passed = String(optExecUrl || "").trim();
+  if (passed) return passed;
+  try {
+    const svcUrl = ScriptApp.getService().getUrl();
+    if (svcUrl && String(svcUrl).trim()) return String(svcUrl).trim();
+  } catch (_) {}
+  return PF_CONFIG.WEBAPP_EXEC_URL || "";
+}
+
+function getMobileQuickEntryUrl_(optExecUrl) {
+  const base = resolveExecUrl_(optExecUrl);
+  if (!base) return "";
+  const sep = base.indexOf("?") === -1 ? "?" : "&";
+  return `${base}${sep}k=${encodeURIComponent(getExpectedWebAppKey_())}`;
+}
+
+function doGet(e) {
+  const urlKey = String((e && e.parameter && e.parameter.k) || "").trim();
+  const expectedKey = getExpectedWebAppKey_();
+  const authorized = isValidWebAppKey(urlKey, expectedKey);
+
+  const template = HtmlService.createTemplateFromFile("WebApp");
+  template.initialKey = authorized ? urlKey : "";
+  template.execUrl = resolveExecUrl_("");
+  template.initialStateJson = authorized ? JSON.stringify(apiGetDashboardState(urlKey, true)) : "null";
+
+  return template.evaluate()
     .setTitle("Personal Financials — Quick Entry")
-    .addMetaTag("viewport", "width=device-width, initial-scale=1, maximum-scale=1")
+    .addMetaTag("viewport", "width=device-width, initial-scale=1, viewport-fit=cover")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+function doPost(e) {
+  let req = {};
+  try {
+    const raw = e && e.postData && e.postData.contents ? String(e.postData.contents) : "{}";
+    req = JSON.parse(raw);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: "Invalid JSON body." }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  try {
+    const action = String(req.action || "").trim();
+    const key = String(req.key || "").trim();
+    const payload = req.payload || {};
+
+    let result;
+    if (action === "getState") {
+      result = { ok: true, state: apiGetDashboardState(key, false) };
+    } else if (action === "logTransaction") {
+      result = apiLogTransaction({ ...payload, key });
+    } else if (action === "logLoan") {
+      result = apiLogLoan({ ...payload, key });
+    } else if (action === "sendEmail") {
+      assertWebAppAuth_(key, false);
+      result = { ok: true, ...sendMobileLinkEmail(payload.execUrl) };
+    } else {
+      throw new Error("Unsupported action: " + action);
+    }
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: err.message || String(err) }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
 function showQuickEntrySidebar() {
-  const html = HtmlService.createHtmlOutputFromFile("WebApp")
+  const key = getExpectedWebAppKey_();
+  const template = HtmlService.createTemplateFromFile("WebApp");
+  template.initialKey = key;
+  template.execUrl = resolveExecUrl_("");
+  template.initialStateJson = JSON.stringify(apiGetDashboardState(key, true));
+
+  const html = template.evaluate()
     .setTitle("💰 Quick Entry & Budgets")
     .setWidth(380);
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
-function apiGetDashboardState() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+function apiGetDashboardState(key, isSidebar) {
+  assertWebAppAuth_(key, isSidebar);
+  const ss = getMasterSpreadsheet_();
   const dash = ss.getSheetByName(PF_CONFIG.SHEETS.DASHBOARD);
   const cfg = readBudgetsConfigFromSheet_(ss);
 
@@ -71,7 +157,9 @@ function apiGetDashboardState() {
 
 function apiLogTransaction(payload) {
   if (!payload) throw new Error("Missing transaction payload.");
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  assertWebAppAuth_(payload.key, Boolean(payload.isSidebar));
+
+  const ss = getMasterSpreadsheet_();
   const txSheet = ss.getSheetByName(PF_CONFIG.SHEETS.TRANSACTIONS);
   if (!txSheet) throw new Error("Transactions sheet not found.");
 
@@ -112,7 +200,7 @@ function apiLogTransaction(payload) {
 
   const alertRes = checkAndSendBudgetAlerts(ss, monthKey, false);
   const catStatus = (alertRes.statuses || []).find(s => s.category === category) || null;
-  const state = apiGetDashboardState();
+  const state = apiGetDashboardState(payload.key, Boolean(payload.isSidebar));
 
   return {
     ok: true,
@@ -127,7 +215,9 @@ function apiLogTransaction(payload) {
 
 function apiLogLoan(payload) {
   if (!payload) throw new Error("Missing loan payload.");
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  assertWebAppAuth_(payload.key, Boolean(payload.isSidebar));
+
+  const ss = getMasterSpreadsheet_();
   const loanSheet = ss.getSheetByName(PF_CONFIG.SHEETS.LOANS);
   if (!loanSheet) throw new Error("Loans & People sheet not found.");
 
@@ -168,6 +258,49 @@ function apiLogLoan(payload) {
     person,
     amount,
     direction,
-    state: apiGetDashboardState()
+    state: apiGetDashboardState(payload.key, Boolean(payload.isSidebar))
   };
+}
+
+function sendMobileLinkEmail(optExecUrl) {
+  const url = getMobileQuickEntryUrl_(optExecUrl);
+  if (!url) throw new Error("Mobile Web App URL is not configured yet.");
+
+  const ss = getMasterSpreadsheet_();
+  const sheetUrl = ss.getUrl();
+  const recipients = PF_CONFIG.EMAIL_RECIPIENTS || [PF_CONFIG.ALERT_EMAIL];
+
+  const htmlBody = `
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;max-width:560px;margin:auto;border:1px solid #dadce0;border-radius:12px;overflow:hidden;">
+      <div style="background:#1b5e20;color:#ffffff;padding:18px 22px;">
+        <h2 style="margin:0;font-size:18px;">💰 Personal Financials — iPhone Quick Entry</h2>
+      </div>
+      <div style="padding:20px 22px;color:#202124;line-height:1.5;">
+        <p style="margin-top:0;">Your Mobile Quick-Entry app is now configured to open directly in <b>iPhone Safari</b> without Google cookie/redirect issues.</p>
+        <p style="margin:22px 0;text-align:center;">
+          <a href="${url}" style="display:inline-block;background:#1b5e20;color:#ffffff;text-decoration:none;font-weight:700;padding:13px 24px;border-radius:10px;font-size:15px;">
+            📱 Open Quick Entry in Safari
+          </a>
+        </p>
+        <div style="background:#f1f3f4;border-radius:8px;padding:12px;font-size:12px;word-break:break-all;color:#3c4043;">
+          <b>Direct Link:</b><br>${url}
+        </div>
+        <p style="font-size:13px;color:#5f6368;margin-top:16px;">
+          <b>iPhone Safari Tip:</b><br>
+          1. If Mail/Gmail opens an in-app preview, tap the <b>Safari compass icon</b> at the bottom-right (or hold the button &rarr; <i>Open in Safari</i>).<br>
+          2. In Safari, tap <b>Share</b> &rarr; <b>Add to Home Screen</b> for a 1-tap app icon.
+        </p>
+        <p style="font-size:12px;color:#5f6368;margin-bottom:0;">
+          Master Workbook: <a href="${sheetUrl}">Open Personal Financials Sheet</a>
+        </p>
+      </div>
+    </div>`;
+
+  MailApp.sendEmail({
+    to: recipients.join(","),
+    subject: "📱 Personal Financials — Your iPhone Safari Quick-Entry Link",
+    htmlBody
+  });
+
+  return { recipients, url };
 }

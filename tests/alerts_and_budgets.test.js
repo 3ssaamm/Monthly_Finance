@@ -1,5 +1,6 @@
 const assert = require("assert");
 const { evaluateBudgetStatuses, buildAlertKey } = require("../src/Alerts");
+const { isValidWebAppKey } = require("../src/Config");
 
 const budgets = [
   { category: "Entertainment", budget: 3500, warnPct: 0.8, emailAlert: true },
@@ -35,4 +36,10 @@ assert.strictEqual(byCat.Family.severity, "ok");
 assert.strictEqual(buildAlertKey("2026-11", "Entertainment", "80"), "PF_ALERT_2026-11_ENTERTAINMENT_80");
 assert.strictEqual(buildAlertKey("2026-11", "Food", "100"), "PF_ALERT_2026-11_FOOD_100");
 
-console.log("12 assertions passed (budgets & threshold alerts).");
+// WebApp access key guard
+assert.strictEqual(isValidWebAppKey("pf_mido_9f83c7a2d4e1b6085c3a91e7", "pf_mido_9f83c7a2d4e1b6085c3a91e7"), true);
+assert.strictEqual(isValidWebAppKey("  pf_mido_9f83c7a2d4e1b6085c3a91e7 ", "pf_mido_9f83c7a2d4e1b6085c3a91e7"), true);
+assert.strictEqual(isValidWebAppKey("", "pf_mido_9f83c7a2d4e1b6085c3a91e7"), false);
+assert.strictEqual(isValidWebAppKey("wrong_key", "pf_mido_9f83c7a2d4e1b6085c3a91e7"), false);
+
+console.log("16 assertions passed (budgets, alerts & WebApp key auth).");

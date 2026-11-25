@@ -169,7 +169,7 @@ function buildMidoNbeSyncRows(params) {
 }
 
 function syncFromNbeCreditCard(optSs) {
-  const ss = optSs || SpreadsheetApp.getActiveSpreadsheet();
+  const ss = optSs || getMasterSpreadsheet_();
   const cfg = readBudgetsConfigFromSheet_(ss);
   const nbeId = cfg.nbeCreditId || PF_CONFIG.NBE_CREDIT_ID;
   const nbeSs = SpreadsheetApp.openById(nbeId);

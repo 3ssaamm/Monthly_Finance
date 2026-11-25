@@ -2,7 +2,10 @@
 <html>
 <head>
   <base target="_top">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Financials">
   <style>
     :root {
       --primary: #1b5e20;
@@ -19,28 +22,28 @@
       --ok-bg: #d9ead3;
       --border: #e5e7eb;
     }
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { margin: 0; background: var(--bg); color: var(--text); padding-bottom: 32px; }
-    .header { background: var(--primary); color: #fff; padding: 14px 16px; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { margin: 0; background: var(--bg); color: var(--text); padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
+    .header { background: var(--primary); color: #fff; padding: calc(14px + env(safe-area-inset-top)) 16px 14px; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
     .header h1 { margin: 0; font-size: 16px; display: flex; justify-content: space-between; align-items: center; }
-    .pill { background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .pill { background: rgba(255,255,255,0.2); padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 600; }
     .container { max-width: 480px; margin: 0 auto; padding: 12px; }
     .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
     .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
     .kpi .lbl { font-size: 11px; color: var(--muted); }
     .kpi .val { font-size: 15px; font-weight: 700; margin-top: 2px; }
     .tabs { display: flex; gap: 6px; margin-bottom: 12px; background: #e5e7eb; padding: 4px; border-radius: 10px; }
-    .tab { flex: 1; border: none; background: transparent; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+    .tab { flex: 1; border: none; background: transparent; padding: 9px 6px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
     .tab.active { background: var(--card); color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
-    label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin: 10px 0 4px; text-transform: uppercase; letter-spacing: .3px; }
+    label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin: 12px 0 4px; text-transform: uppercase; letter-spacing: .3px; }
     label:first-child { margin-top: 0; }
-    input, select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; background: #fff; }
+    input, select { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; background: #fff; color: var(--text); }
     input:focus, select:focus { outline: 2px solid var(--primary); border-color: transparent; }
     .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-    .chip { border: 1px solid var(--border); background: #f9fafb; color: var(--text); padding: 6px 10px; border-radius: 16px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .chip { border: 1px solid var(--border); background: #f9fafb; color: var(--text); padding: 7px 11px; border-radius: 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
     .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .btn { width: 100%; margin-top: 14px; padding: 12px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .btn { width: 100%; margin-top: 14px; padding: 13px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
     .btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .toast { padding: 10px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 12px; display: none; }
     .toast.ok { background: var(--ok-bg); color: var(--ok); display: block; }
@@ -65,83 +68,102 @@
   <div class="container">
     <div id="toast" class="toast"></div>
 
-    <div class="kpi-grid">
-      <div class="kpi"><div class="lbl">Expected Bank</div><div class="val" id="kpiBank">—</div></div>
-      <div class="kpi"><div class="lbl">Expected Cash</div><div class="val" id="kpiCash">—</div></div>
-      <div class="kpi"><div class="lbl">Month Spend</div><div class="val" id="kpiSpend">—</div></div>
-      <div class="kpi"><div class="lbl">Mido NBE Card Due</div><div class="val" id="kpiCard">—</div></div>
+    <div id="lockCard" class="card hidden">
+      <label>Private Access Key</label>
+      <input id="keyInput" type="password" placeholder="Paste your ?k= key to unlock">
+      <button class="btn" id="unlockBtn" onclick="unlockWithKey()">Unlock Quick Entry</button>
     </div>
 
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('tx', this)">💸 Expense / Income</button>
-      <button class="tab" onclick="switchTab('loan', this)">🤝 Loan / Split</button>
-      <button class="tab" onclick="switchTab('budgets', this)">🎯 Budgets</button>
-    </div>
+    <div id="appBody">
+      <div class="kpi-grid">
+        <div class="kpi"><div class="lbl">Expected Bank</div><div class="val" id="kpiBank">—</div></div>
+        <div class="kpi"><div class="lbl">Expected Cash</div><div class="val" id="kpiCash">—</div></div>
+        <div class="kpi"><div class="lbl">Month Spend</div><div class="val" id="kpiSpend">—</div></div>
+        <div class="kpi"><div class="lbl">Mido NBE Card Due</div><div class="val" id="kpiCard">—</div></div>
+      </div>
 
-    <!-- TAB 1: TRANSACTION -->
-    <div id="tab-tx" class="card">
-      <label>Type</label>
-      <div class="chips" id="typeChips"></div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('tx', this)">💸 Expense / Income</button>
+        <button class="tab" onclick="switchTab('loan', this)">🤝 Loan / Split</button>
+        <button class="tab" onclick="switchTab('budgets', this)">🎯 Budgets</button>
+      </div>
 
-      <label>Category</label>
-      <div class="chips" id="catChips"></div>
+      <!-- TAB 1: TRANSACTION -->
+      <div id="tab-tx" class="card">
+        <label>Type</label>
+        <div class="chips" id="typeChips"></div>
 
-      <label>Amount (EGP) — supports math like 120+45</label>
-      <input id="txAmount" type="text" inputmode="decimal" placeholder="e.g. 250 or 120+45">
+        <label>Category</label>
+        <div class="chips" id="catChips"></div>
 
-      <label>Wallet</label>
-      <div class="chips" id="walletChips"></div>
+        <label>Amount (EGP) — supports math like 120+45</label>
+        <input id="txAmount" type="text" inputmode="decimal" placeholder="e.g. 250 or 120+45">
 
-      <label>Details / Merchant</label>
-      <input id="txDetails" type="text" placeholder="e.g. Coffee, Out, Uber, Gym">
+        <label>Wallet</label>
+        <div class="chips" id="walletChips"></div>
 
-      <label>Date</label>
-      <input id="txDate" type="date">
+        <label>Details / Merchant</label>
+        <input id="txDetails" type="text" placeholder="e.g. Coffee, Out, Uber, Gym">
 
-      <button class="btn" id="txBtn" onclick="submitTx()">Save Transaction</button>
-    </div>
+        <label>Date</label>
+        <input id="txDate" type="date">
 
-    <!-- TAB 2: LOAN -->
-    <div id="tab-loan" class="card hidden">
-      <label>Person</label>
-      <input id="loanPerson" type="text" list="peopleList" placeholder="Abdo, Dad, Houda...">
-      <datalist id="peopleList"></datalist>
+        <button class="btn" id="txBtn" onclick="submitTx()">Save Transaction</button>
+      </div>
 
-      <label>Direction</label>
-      <select id="loanDir">
-        <option value="Lent / Paid for Them">Lent / Paid for Them (+ Owed to Me)</option>
-        <option value="Repaid to Me">Repaid to Me (- Reduces Balance)</option>
-      </select>
+      <!-- TAB 2: LOAN -->
+      <div id="tab-loan" class="card hidden">
+        <label>Person</label>
+        <input id="loanPerson" type="text" list="peopleList" placeholder="Abdo, Dad, Houda...">
+        <datalist id="peopleList"></datalist>
 
-      <label>Amount (EGP)</label>
-      <input id="loanAmount" type="text" inputmode="decimal" placeholder="e.g. 500">
+        <label>Direction</label>
+        <select id="loanDir">
+          <option value="Lent / Paid for Them">Lent / Paid for Them (+ Owed to Me)</option>
+          <option value="Repaid to Me">Repaid to Me (- Reduces Balance)</option>
+        </select>
 
-      <label>Wallet</label>
-      <select id="loanWallet">
-        <option value="Bank / InstaPay">Bank / InstaPay</option>
-        <option value="Cash">Cash</option>
-        <option value="NBE Credit Card">NBE Credit Card</option>
-      </select>
+        <label>Amount (EGP)</label>
+        <input id="loanAmount" type="text" inputmode="decimal" placeholder="e.g. 500">
 
-      <label>Notes</label>
-      <input id="loanNotes" type="text" placeholder="Reason or split description">
+        <label>Wallet</label>
+        <select id="loanWallet">
+          <option value="Bank / InstaPay">Bank / InstaPay</option>
+          <option value="Cash">Cash</option>
+          <option value="NBE Credit Card">NBE Credit Card</option>
+        </select>
 
-      <label>Date</label>
-      <input id="loanDate" type="date">
+        <label>Notes</label>
+        <input id="loanNotes" type="text" placeholder="Reason or split description">
 
-      <button class="btn" id="loanBtn" onclick="submitLoan()">Save Loan Entry</button>
-    </div>
+        <label>Date</label>
+        <input id="loanDate" type="date">
 
-    <!-- TAB 3: BUDGETS & LOANS OVERVIEW -->
-    <div id="tab-budgets" class="card hidden">
-      <div id="budgetList"></div>
-      <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;">
-      <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Active Loan Balances</div>
-      <div id="loanBalancesList"></div>
+        <button class="btn" id="loanBtn" onclick="submitLoan()">Save Loan Entry</button>
+      </div>
+
+      <!-- TAB 3: BUDGETS & LOANS OVERVIEW -->
+      <div id="tab-budgets" class="card hidden">
+        <div id="budgetList"></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Active Loan Balances</div>
+        <div id="loanBalancesList"></div>
+      </div>
     </div>
   </div>
 
   <script>
+    const INITIAL_KEY = <?= JSON.stringify(initialKey || "") ?>;
+    const EXEC_URL = <?= JSON.stringify(execUrl || "") ?>;
+    const INITIAL_STATE = <?!= initialStateJson || "null" ?>;
+
+    let accessKey = INITIAL_KEY || (function () {
+      try { return localStorage.getItem("pf_access_key") || ""; } catch (_) { return ""; }
+    })();
+    if (INITIAL_KEY) {
+      try { localStorage.setItem("pf_access_key", INITIAL_KEY); } catch (_) {}
+    }
+
     let state = null;
     let selectedType = "Expense";
     let selectedCat = "Entertainment";
@@ -155,6 +177,18 @@
       const el = document.getElementById("toast");
       el.className = "toast " + (cls || "ok");
       el.textContent = msg;
+    }
+
+    function showLockScreen(msg) {
+      document.getElementById("lockCard").classList.remove("hidden");
+      document.getElementById("appBody").classList.add("hidden");
+      document.getElementById("monthPill").textContent = "Locked";
+      if (msg) showToast(msg, "warn");
+    }
+
+    function showAppBody() {
+      document.getElementById("lockCard").classList.add("hidden");
+      document.getElementById("appBody").classList.remove("hidden");
     }
 
     function switchTab(tab, btn) {
@@ -179,6 +213,7 @@
     }
 
     function renderState(s) {
+      showAppBody();
       state = s;
       document.getElementById("monthPill").textContent = s.monthKey;
       document.getElementById("kpiBank").textContent = fmt(s.expectedBank);
@@ -235,6 +270,66 @@
       ).join("") || "<div style='font-size:12px;color:#6b7280;'>No active loans</div>";
     }
 
+    function callBackend(action, payload) {
+      return new Promise((resolve, reject) => {
+        const invokeFetch = () => {
+          if (!EXEC_URL) {
+            reject(new Error("Web App endpoint URL missing."));
+            return;
+          }
+          fetch(EXEC_URL, {
+            method: "POST",
+            redirect: "follow",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ key: accessKey, action, payload })
+          })
+            .then(r => r.json())
+            .then(res => {
+              if (!res || res.ok === false) {
+                reject(new Error((res && res.error) || "Request failed"));
+              } else {
+                resolve(res);
+              }
+            })
+            .catch(reject);
+        };
+
+        if (typeof google !== "undefined" && google.script && google.script.run) {
+          const runner = google.script.run
+            .withSuccessHandler(res => {
+              if (action === "getState") resolve({ ok: true, state: res });
+              else resolve(res);
+            })
+            .withFailureHandler(() => invokeFetch());
+
+          if (action === "getState") runner.apiGetDashboardState(accessKey, false);
+          else if (action === "logTransaction") runner.apiLogTransaction({ ...payload, key: accessKey });
+          else if (action === "logLoan") runner.apiLogLoan({ ...payload, key: accessKey });
+          else invokeFetch();
+        } else {
+          invokeFetch();
+        }
+      });
+    }
+
+    function unlockWithKey() {
+      const k = document.getElementById("keyInput").value.trim();
+      if (!k) { showToast("Enter your access key.", "danger"); return; }
+      accessKey = k;
+      document.getElementById("unlockBtn").disabled = true;
+      callBackend("getState", {})
+        .then(res => {
+          try { localStorage.setItem("pf_access_key", accessKey); } catch (_) {}
+          document.getElementById("unlockBtn").disabled = false;
+          document.getElementById("toast").className = "toast";
+          renderState(res.state);
+        })
+        .catch(err => {
+          document.getElementById("unlockBtn").disabled = false;
+          showLockScreen("❌ " + (err.message || "Invalid access key."));
+        });
+    }
+
     function submitTx() {
       const btn = document.getElementById("txBtn");
       const amount = document.getElementById("txAmount").value.trim();
@@ -244,8 +339,8 @@
 
       btn.disabled = true;
       btn.textContent = "Saving...";
-      google.script.run
-        .withSuccessHandler(res => {
+      callBackend("logTransaction", { type: selectedType, category: selectedCat, amount, wallet: selectedWallet, details, date })
+        .then(res => {
           btn.disabled = false;
           btn.textContent = "Save Transaction";
           document.getElementById("txAmount").value = "";
@@ -259,12 +354,11 @@
             showToast(`✅ Saved ${fmt(res.amount)} under ${res.category}.`, "ok");
           }
         })
-        .withFailureHandler(err => {
+        .catch(err => {
           btn.disabled = false;
           btn.textContent = "Save Transaction";
           showToast("❌ " + (err.message || err), "danger");
-        })
-        .apiLogTransaction({ type: selectedType, category: selectedCat, amount, wallet: selectedWallet, details, date });
+        });
     }
 
     function submitLoan() {
@@ -279,8 +373,8 @@
 
       btn.disabled = true;
       btn.textContent = "Saving...";
-      google.script.run
-        .withSuccessHandler(res => {
+      callBackend("logLoan", { person, direction, amount, wallet, notes, date })
+        .then(res => {
           btn.disabled = false;
           btn.textContent = "Save Loan Entry";
           document.getElementById("loanAmount").value = "";
@@ -288,15 +382,22 @@
           renderState(res.state);
           showToast(`✅ Recorded ${fmt(res.amount)} (${res.direction}) for ${res.person}.`, "ok");
         })
-        .withFailureHandler(err => {
+        .catch(err => {
           btn.disabled = false;
           btn.textContent = "Save Loan Entry";
           showToast("❌ " + (err.message || err), "danger");
-        })
-        .apiLogLoan({ person, direction, amount, wallet, notes, date });
+        });
     }
 
-    google.script.run.withSuccessHandler(renderState).apiGetDashboardState();
+    if (INITIAL_STATE) {
+      renderState(INITIAL_STATE);
+    } else if (accessKey) {
+      callBackend("getState", {})
+        .then(res => renderState(res.state))
+        .catch(() => showLockScreen("Open using your private link (?k=...) or enter your key."));
+    } else {
+      showLockScreen("Open using your private link (?k=...) or enter your key.");
+    }
   </script>
 </body>
 </html>

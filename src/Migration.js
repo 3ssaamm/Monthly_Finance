@@ -76,7 +76,7 @@ function normalizeLegacyAbdoRow(rawRow, rowIndex) {
 }
 
 function runHistoricalMigration(optSs) {
-  const ss = optSs || SpreadsheetApp.getActiveSpreadsheet();
+  const ss = optSs || getMasterSpreadsheet_();
   const txSheet = ss.getSheetByName(PF_CONFIG.SHEETS.TRANSACTIONS);
   const loanSheet = ss.getSheetByName(PF_CONFIG.SHEETS.LOANS);
   const invSheet = ss.getSheetByName(PF_CONFIG.SHEETS.INVESTMENTS);

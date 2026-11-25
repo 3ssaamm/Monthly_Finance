@@ -5,6 +5,7 @@
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu("💰 Personal Finance")
+    .addItem("📧 Email Mobile Link to My iPhone", "menuSendMobileLinkEmail")
     .addItem("📱 Open Quick-Entry Sidebar", "showQuickEntrySidebar")
     .addItem("🔄 Sync NBE Credit Card V2", "menuSyncNbeCard")
     .addItem("🔔 Check Budget Alerts Now", "menuCheckBudgetAlerts")
@@ -107,14 +108,21 @@ function menuInstallDailyTriggers() {
   SpreadsheetApp.getUi().alert("✅ Daily 9:00 PM Cairo trigger installed for NBE Credit Card sync & budget alerts.");
 }
 
+function menuSendMobileLinkEmail() {
+  const res = sendMobileLinkEmail();
+  SpreadsheetApp.getUi().alert(
+    `✅ Mobile Safari Quick-Entry link emailed to:\n${res.recipients.join(", ")}\n\nLink:\n${res.url}`
+  );
+}
+
 function menuShowWebAppInfo() {
   let url = "";
   try {
-    url = ScriptApp.getService().getUrl() || "";
+    url = getMobileQuickEntryUrl_();
   } catch (_) {}
   SpreadsheetApp.getUi().alert(
     url
-      ? `📱 Mobile Quick-Entry Web App URL:\n\n${url}\n\nBookmark this link on your phone's home screen!`
+      ? `📱 iPhone Safari Quick-Entry Link:\n\n${url}\n\nOpen in Safari on your iPhone and tap Share → Add to Home Screen!`
       : "Open Extensions → Apps Script → Deploy → Manage Deployments to view your Web App URL."
   );
 }

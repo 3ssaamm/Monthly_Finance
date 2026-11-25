@@ -142,7 +142,7 @@ function getCurrentCairoMonthProgress_(monthKey) {
 }
 
 function checkAndSendBudgetAlerts(ss, optMonthKey, optDryRun) {
-  const targetSs = ss || SpreadsheetApp.getActiveSpreadsheet();
+  const targetSs = ss || getMasterSpreadsheet_();
   const cfg = readBudgetsConfigFromSheet_(targetSs);
   const dash = targetSs.getSheetByName(PF_CONFIG.SHEETS.DASHBOARD);
   const monthKey = optMonthKey || (dash ? String(dash.getRange("G3").getDisplayValue() || "").trim() : "") ||

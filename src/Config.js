@@ -5,10 +5,14 @@
 
 const PF_CONFIG = {
   SPREADSHEET_TITLE: "Personal Financials",
+  MASTER_SPREADSHEET_ID: "1fW72r2bvYswRtHyySlReRRkMgUVosDU7HqKAM-kdtZc",
   TIMEZONE: "Africa/Cairo",
   CURRENCY_FORMAT: '"EGP "#,##0.00',
   USD_FORMAT: '"$"#,##0.00',
   ALERT_EMAIL: "muhammad.essam811@gmail.com",
+  EMAIL_RECIPIENTS: ["muhammad.essam811@gmail.com", "midoessam704@gmail.com"],
+  DEFAULT_WEBAPP_KEY: "pf_mido_9f83c7a2d4e1b6085c3a91e7",
+  WEBAPP_EXEC_URL: "https://script.google.com/macros/s/AKfycbx5TOdjYW66TCIjmWC8QSMZQKVj6q1oal4BJVJSMtUFRy_cxNxN8SeT3ek_EdyuCUEIpA/exec",
   NBE_CREDIT_ID: "1MLFFa0JI0jatCW1ZE6TXrnA4EjU5p0jY9EWQhxPO8Sc",
   LEGACY_FINANCIALS_ID: "1ZmHxw__xSKC-HFz85svsjuppi1G79-7hG9R-h8Yr4gk",
   NBE_SYNC_START_MONTH: "2026-11",
@@ -401,6 +405,27 @@ function computeWalletBalances(params) {
   };
 }
 
+function getMasterSpreadsheet_() {
+  try {
+    const active = (typeof SpreadsheetApp !== "undefined" && SpreadsheetApp.getActiveSpreadsheet)
+      ? SpreadsheetApp.getActiveSpreadsheet()
+      : null;
+    if (active) return active;
+  } catch (_) {}
+  return SpreadsheetApp.openById(PF_CONFIG.MASTER_SPREADSHEET_ID);
+}
+
+function isValidWebAppKey(candidate, expectedKey) {
+  const c = String(candidate || "").trim();
+  const e = String(expectedKey || "").trim();
+  if (!c || !e || c.length !== e.length) return false;
+  let diff = 0;
+  for (let i = 0; i < e.length; i++) {
+    diff |= c.charCodeAt(i) ^ e.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     PF_CONFIG,
@@ -410,6 +435,8 @@ if (typeof module !== "undefined" && module.exports) {
     toMonthKey,
     normalizePersonName,
     categorizeDescription,
-    computeWalletBalances
+    computeWalletBalances,
+    getMasterSpreadsheet_,
+    isValidWebAppKey
   };
 }
