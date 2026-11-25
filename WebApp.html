@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <style>
+    :root {
+      --primary: #1b5e20;
+      --primary-light: #e8f5e9;
+      --bg: #f6f8f7;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --warn: #b06000;
+      --warn-bg: #fff2cc;
+      --danger: #c5221f;
+      --danger-bg: #fce8e6;
+      --ok: #137333;
+      --ok-bg: #d9ead3;
+      --border: #e5e7eb;
+    }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); padding-bottom: 32px; }
+    .header { background: var(--primary); color: #fff; padding: 14px 16px; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+    .header h1 { margin: 0; font-size: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .pill { background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .container { max-width: 480px; margin: 0 auto; padding: 12px; }
+    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+    .kpi .lbl { font-size: 11px; color: var(--muted); }
+    .kpi .val { font-size: 15px; font-weight: 700; margin-top: 2px; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 12px; background: #e5e7eb; padding: 4px; border-radius: 10px; }
+    .tab { flex: 1; border: none; background: transparent; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+    .tab.active { background: var(--card); color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+    label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin: 10px 0 4px; text-transform: uppercase; letter-spacing: .3px; }
+    label:first-child { margin-top: 0; }
+    input, select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; background: #fff; }
+    input:focus, select:focus { outline: 2px solid var(--primary); border-color: transparent; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .chip { border: 1px solid var(--border); background: #f9fafb; color: var(--text); padding: 6px 10px; border-radius: 16px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn { width: 100%; margin-top: 14px; padding: 12px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .toast { padding: 10px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 12px; display: none; }
+    .toast.ok { background: var(--ok-bg); color: var(--ok); display: block; }
+    .toast.warn { background: var(--warn-bg); color: var(--warn); display: block; }
+    .toast.danger { background: var(--danger-bg); color: var(--danger); display: block; }
+    .budget-row { margin-bottom: 10px; }
+    .budget-row:last-child { margin-bottom: 0; }
+    .budget-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+    .bar-bg { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 999px; transition: width .25s ease; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>
+      <span>💰 Personal Financials</span>
+      <span class="pill" id="monthPill">Loading...</span>
+    </h1>
+  </div>
+
+  <div class="container">
+    <div id="toast" class="toast"></div>
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="lbl">Expected Bank</div><div class="val" id="kpiBank">—</div></div>
+      <div class="kpi"><div class="lbl">Expected Cash</div><div class="val" id="kpiCash">—</div></div>
+      <div class="kpi"><div class="lbl">Month Spend</div><div class="val" id="kpiSpend">—</div></div>
+      <div class="kpi"><div class="lbl">Mido NBE Card Due</div><div class="val" id="kpiCard">—</div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('tx', this)">💸 Expense / Income</button>
+      <button class="tab" onclick="switchTab('loan', this)">🤝 Loan / Split</button>
+      <button class="tab" onclick="switchTab('budgets', this)">🎯 Budgets</button>
+    </div>
+
+    <!-- TAB 1: TRANSACTION -->
+    <div id="tab-tx" class="card">
+      <label>Type</label>
+      <div class="chips" id="typeChips"></div>
+
+      <label>Category</label>
+      <div class="chips" id="catChips"></div>
+
+      <label>Amount (EGP) — supports math like 120+45</label>
+      <input id="txAmount" type="text" inputmode="decimal" placeholder="e.g. 250 or 120+45">
+
+      <label>Wallet</label>
+      <div class="chips" id="walletChips"></div>
+
+      <label>Details / Merchant</label>
+      <input id="txDetails" type="text" placeholder="e.g. Coffee, Out, Uber, Gym">
+
+      <label>Date</label>
+      <input id="txDate" type="date">
+
+      <button class="btn" id="txBtn" onclick="submitTx()">Save Transaction</button>
+    </div>
+
+    <!-- TAB 2: LOAN -->
+    <div id="tab-loan" class="card hidden">
+      <label>Person</label>
+      <input id="loanPerson" type="text" list="peopleList" placeholder="Abdo, Dad, Houda...">
+      <datalist id="peopleList"></datalist>
+
+      <label>Direction</label>
+      <select id="loanDir">
+        <option value="Lent / Paid for Them">Lent / Paid for Them (+ Owed to Me)</option>
+        <option value="Repaid to Me">Repaid to Me (- Reduces Balance)</option>
+      </select>
+
+      <label>Amount (EGP)</label>
+      <input id="loanAmount" type="text" inputmode="decimal" placeholder="e.g. 500">
+
+      <label>Wallet</label>
+      <select id="loanWallet">
+        <option value="Bank / InstaPay">Bank / InstaPay</option>
+        <option value="Cash">Cash</option>
+        <option value="NBE Credit Card">NBE Credit Card</option>
+      </select>
+
+      <label>Notes</label>
+      <input id="loanNotes" type="text" placeholder="Reason or split description">
+
+      <label>Date</label>
+      <input id="loanDate" type="date">
+
+      <button class="btn" id="loanBtn" onclick="submitLoan()">Save Loan Entry</button>
+    </div>
+
+    <!-- TAB 3: BUDGETS & LOANS OVERVIEW -->
+    <div id="tab-budgets" class="card hidden">
+      <div id="budgetList"></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Active Loan Balances</div>
+      <div id="loanBalancesList"></div>
+    </div>
+  </div>
+
+  <script>
+    let state = null;
+    let selectedType = "Expense";
+    let selectedCat = "Entertainment";
+    let selectedWallet = "Bank / InstaPay";
+
+    function fmt(n) {
+      return "EGP " + Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function showToast(msg, cls) {
+      const el = document.getElementById("toast");
+      el.className = "toast " + (cls || "ok");
+      el.textContent = msg;
+    }
+
+    function switchTab(tab, btn) {
+      ["tx", "loan", "budgets"].forEach(t => {
+        document.getElementById("tab-" + t).classList.toggle("hidden", t !== tab);
+      });
+      document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+    }
+
+    function renderChips(containerId, items, current, onPick) {
+      const c = document.getElementById(containerId);
+      c.innerHTML = "";
+      items.forEach(item => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "chip" + (item === current ? " active" : "");
+        b.textContent = item;
+        b.onclick = () => onPick(item);
+        c.appendChild(b);
+      });
+    }
+
+    function renderState(s) {
+      state = s;
+      document.getElementById("monthPill").textContent = s.monthKey;
+      document.getElementById("kpiBank").textContent = fmt(s.expectedBank);
+      document.getElementById("kpiCash").textContent = fmt(s.expectedCash);
+      document.getElementById("kpiSpend").textContent = fmt(s.totalSpend);
+      document.getElementById("kpiCard").textContent = fmt(s.midoCardDue);
+
+      if (!document.getElementById("txDate").value) document.getElementById("txDate").value = s.today;
+      if (!document.getElementById("loanDate").value) document.getElementById("loanDate").value = s.today;
+
+      renderChips("typeChips", ["Expense", "Income", "Reimbursement", "Cash Withdrawal", "CC Bill Payment"], selectedType, v => {
+        selectedType = v;
+        renderState(state);
+      });
+      renderChips("catChips", s.categories, selectedCat, v => {
+        selectedCat = v;
+        renderState(state);
+      });
+      renderChips("walletChips", s.wallets, selectedWallet, v => {
+        selectedWallet = v;
+        renderState(state);
+      });
+
+      const dl = document.getElementById("peopleList");
+      dl.innerHTML = "";
+      (s.people || []).forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.name;
+        dl.appendChild(opt);
+      });
+
+      const bList = document.getElementById("budgetList");
+      bList.innerHTML = "";
+      (s.budgets || []).forEach(b => {
+        const pct = Math.min(100, Math.round((b.pct || 0) * 100));
+        const color = b.severity === "over" ? "#c5221f" : (b.severity === "warn" || b.severity === "pace" ? "#e37400" : "#1b5e20");
+        const row = document.createElement("div");
+        row.className = "budget-row";
+        row.innerHTML = `
+          <div class="budget-head">
+            <span>${b.category} (${b.status})</span>
+            <span>${fmt(b.spent)} / ${fmt(b.budget)}</span>
+          </div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${color};"></div></div>
+        `;
+        bList.appendChild(row);
+      });
+
+      const lList = document.getElementById("loanBalancesList");
+      lList.innerHTML = (s.people || []).map(p =>
+        `<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;">
+          <span>${p.name}</span><strong>${fmt(p.balance)}</strong>
+        </div>`
+      ).join("") || "<div style='font-size:12px;color:#6b7280;'>No active loans</div>";
+    }
+
+    function submitTx() {
+      const btn = document.getElementById("txBtn");
+      const amount = document.getElementById("txAmount").value.trim();
+      const details = document.getElementById("txDetails").value.trim();
+      const date = document.getElementById("txDate").value;
+      if (!amount) { showToast("Please enter an amount.", "danger"); return; }
+
+      btn.disabled = true;
+      btn.textContent = "Saving...";
+      google.script.run
+        .withSuccessHandler(res => {
+          btn.disabled = false;
+          btn.textContent = "Save Transaction";
+          document.getElementById("txAmount").value = "";
+          document.getElementById("txDetails").value = "";
+          renderState(res.state);
+          if (res.catStatus && res.catStatus.severity === "over") {
+            showToast(`🚨 Saved ${fmt(res.amount)}! ${res.category} is OVER BUDGET (${Math.round(res.catStatus.pct*100)}%).`, "danger");
+          } else if (res.catStatus && (res.catStatus.severity === "warn" || res.catStatus.severity === "pace")) {
+            showToast(`⚠️ Saved ${fmt(res.amount)}! ${res.category} at ${Math.round(res.catStatus.pct*100)}% (${fmt(res.catStatus.remaining)} left).`, "warn");
+          } else {
+            showToast(`✅ Saved ${fmt(res.amount)} under ${res.category}.`, "ok");
+          }
+        })
+        .withFailureHandler(err => {
+          btn.disabled = false;
+          btn.textContent = "Save Transaction";
+          showToast("❌ " + (err.message || err), "danger");
+        })
+        .apiLogTransaction({ type: selectedType, category: selectedCat, amount, wallet: selectedWallet, details, date });
+    }
+
+    function submitLoan() {
+      const btn = document.getElementById("loanBtn");
+      const person = document.getElementById("loanPerson").value.trim();
+      const direction = document.getElementById("loanDir").value;
+      const amount = document.getElementById("loanAmount").value.trim();
+      const wallet = document.getElementById("loanWallet").value;
+      const notes = document.getElementById("loanNotes").value.trim();
+      const date = document.getElementById("loanDate").value;
+      if (!person || !amount) { showToast("Enter person and amount.", "danger"); return; }
+
+      btn.disabled = true;
+      btn.textContent = "Saving...";
+      google.script.run
+        .withSuccessHandler(res => {
+          btn.disabled = false;
+          btn.textContent = "Save Loan Entry";
+          document.getElementById("loanAmount").value = "";
+          document.getElementById("loanNotes").value = "";
+          renderState(res.state);
+          showToast(`✅ Recorded ${fmt(res.amount)} (${res.direction}) for ${res.person}.`, "ok");
+        })
+        .withFailureHandler(err => {
+          btn.disabled = false;
+          btn.textContent = "Save Loan Entry";
+          showToast("❌ " + (err.message || err), "danger");
+        })
+        .apiLogLoan({ person, direction, amount, wallet, notes, date });
+    }
+
+    google.script.run.withSuccessHandler(renderState).apiGetDashboardState();
+  </script>
+</body>
+</html>
