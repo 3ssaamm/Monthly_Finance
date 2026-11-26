@@ -90,6 +90,8 @@ function doPost(e) {
       result = apiLogLoan({ ...payload, key });
     } else if (action === "logInvestment") {
       result = apiLogInvestment({ ...payload, key });
+    } else if (action === "reconcileWallets") {
+      result = apiReconcileWallets({ ...payload, key });
     } else if (action === "sendEmail") {
       assertWebAppAuth_(key, false);
       result = { ok: true, ...sendMobileLinkEmail(payload.execUrl) };
@@ -135,7 +137,12 @@ function apiGetDashboardState(key, isSidebar) {
 
   let expectedBank = 0;
   let expectedCash = 0;
+  let actualBank = 0;
+  let actualCash = 0;
   let midoCardDue = 0;
+  let nbeTotalBill = 0;
+  let nbeCycle = "";
+  let nbeDueDate = "";
   let totalIncome = 0;
   let totalSpend = 0;
   if (dash) {
@@ -143,7 +150,12 @@ function apiGetDashboardState(key, isSidebar) {
     totalSpend = Number(dash.getRange("C6").getValue() || 0);
     expectedBank = Number(dash.getRange("K10").getValue() || 0);
     expectedCash = Number(dash.getRange("K11").getValue() || 0);
+    actualBank = Number(dash.getRange("L10").getValue() || 0);
+    actualCash = Number(dash.getRange("L11").getValue() || 0);
+    nbeCycle = String(dash.getRange("J19").getDisplayValue() || "").trim();
     midoCardDue = Number(dash.getRange("J20").getValue() || 0);
+    nbeDueDate = String(dash.getRange("K20").getDisplayValue() || "").trim();
+    nbeTotalBill = Number(dash.getRange("J22").getValue() || 0);
   }
 
   const loanSheet = ss.getSheetByName(PF_CONFIG.SHEETS.LOANS);
@@ -183,7 +195,12 @@ function apiGetDashboardState(key, isSidebar) {
     totalSpend,
     expectedBank,
     expectedCash,
+    actualBank,
+    actualCash,
     midoCardDue,
+    nbeTotalBill,
+    nbeCycle,
+    nbeDueDate,
     categories: PF_CONFIG.CATEGORIES,
     txTypes: PF_CONFIG.TX_TYPES,
     wallets: PF_CONFIG.WALLETS,
@@ -381,6 +398,69 @@ function apiLogInvestment(payload) {
     asset,
     mode,
     amount: loggedAmount,
+    state: apiGetDashboardState(payload.key, Boolean(payload.isSidebar))
+  };
+}
+
+function reconcileWalletsToActual_(ss, opts) {
+  const options = opts || {};
+  const dash = ss.getSheetByName(PF_CONFIG.SHEETS.DASHBOARD);
+  const archive = ss.getSheetByName(PF_CONFIG.SHEETS.ARCHIVE);
+  if (!dash || !archive) throw new Error("Dashboard or _Archive_Store sheet not found.");
+
+  const expectedBank = Number(dash.getRange("K10").getValue() || 0);
+  const expectedCash = Number(dash.getRange("K11").getValue() || 0);
+  const oldBankAnchor = Number(archive.getRange("B2").getValue() || 0);
+  const oldCashAnchor = Number(archive.getRange("B3").getValue() || 0);
+
+  let targetBank = null;
+  if (options.actualBank !== undefined && String(options.actualBank).trim() !== "") {
+    targetBank = evalSimpleMathExpr(options.actualBank);
+    if (!isFinite(targetBank)) throw new Error("Invalid Actual Bank amount.");
+  } else if (options.useSheetActuals) {
+    targetBank = Number(dash.getRange("L10").getValue());
+  }
+
+  let targetCash = null;
+  if (options.actualCash !== undefined && String(options.actualCash).trim() !== "") {
+    targetCash = evalSimpleMathExpr(options.actualCash);
+    if (!isFinite(targetCash)) throw new Error("Invalid Actual Cash amount.");
+  } else if (options.useSheetActuals) {
+    targetCash = Number(dash.getRange("L11").getValue());
+  }
+
+  if (targetBank === null && targetCash === null) {
+    throw new Error("Enter an Actual Bank or Actual Cash balance to sync.");
+  }
+
+  if (targetBank !== null && isFinite(targetBank)) {
+    dash.getRange("L10").setValue(targetBank);
+    archive.getRange("B2").setValue(computeCalibratedAnchor(oldBankAnchor, expectedBank, targetBank));
+  }
+  if (targetCash !== null && isFinite(targetCash)) {
+    dash.getRange("L11").setValue(targetCash);
+    archive.getRange("B3").setValue(computeCalibratedAnchor(oldCashAnchor, expectedCash, targetCash));
+  }
+  archive.getRange("B4").setValue(Utilities.formatDate(new Date(), PF_CONFIG.TIMEZONE, "yyyy-MM-dd HH:mm"));
+  SpreadsheetApp.flush();
+
+  return {
+    ok: true,
+    targetBank: targetBank !== null ? targetBank : expectedBank,
+    targetCash: targetCash !== null ? targetCash : expectedCash
+  };
+}
+
+function apiReconcileWallets(payload) {
+  if (!payload) throw new Error("Missing reconciliation payload.");
+  assertWebAppAuth_(payload.key, Boolean(payload.isSidebar));
+  const ss = getMasterSpreadsheet_();
+  reconcileWalletsToActual_(ss, {
+    actualBank: payload.actualBank,
+    actualCash: payload.actualCash
+  });
+  return {
+    ok: true,
     state: apiGetDashboardState(payload.key, Boolean(payload.isSidebar))
   };
 }

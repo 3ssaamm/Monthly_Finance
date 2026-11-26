@@ -475,7 +475,7 @@ function setupDashboardSheet_(sheet) {
 
   sheet.getRange("I19:N23").setValues([
     ["Active Card Cycle", "='_NBE_Cache'!B2", "='_NBE_Cache'!B5", "USD Cash ($100)", "='Investments'!D5", "='Investments'!E5"],
-    ["Mido Card Share Due", "='_NBE_Cache'!B7", "='_NBE_Cache'!B4", "Thndr Cloud", "='Investments'!D6", "='Investments'!E6"],
+    ["Mido Card Share Due", '=IF(ISNUMBER(SEARCH("Paid",\'_NBE_Cache\'!B5)),0,MAX(0,\'_NBE_Cache\'!B7-SUMIFS(Transactions!$F$2:$F,Transactions!$C$2:$C,$G$3,Transactions!$D$2:$D,"CC Bill Payment")))', "='_NBE_Cache'!B4", "Thndr Cloud", "='Investments'!D6", "='Investments'!E6"],
     ["Mido Next Forecast", "='_NBE_Cache'!B8", "Next Cycle Est.", "Thndr FI Funds", "='Investments'!D7", "='Investments'!E7"],
     ["Total Bank Closing Bill", "='_NBE_Cache'!B6", "Full Card Statement", "Abdo Loan Owed", "='Loans & People'!D5", "='Loans & People'!F5"],
     ["Family Shares (Excl Mido)", "='_NBE_Cache'!B9", "='_NBE_Cache'!B10", "Dad & Others", "='Loans & People'!D13-'Loans & People'!D5", '=IF(M23>0,"⏳ Pending","✅ Settled")']

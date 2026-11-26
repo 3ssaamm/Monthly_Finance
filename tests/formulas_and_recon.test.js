@@ -8,7 +8,9 @@ const {
   formatDateIso,
   toMonthKey,
   computeWalletBalances,
-  normalizeTransactionPayload
+  normalizeTransactionPayload,
+  computeRemainingCardDue,
+  computeCalibratedAnchor
 } = require("../src/Config");
 
 // 1. Math expression parser
@@ -123,5 +125,15 @@ const manifestJson = JSON.parse(fs.readFileSync(path.join(docsDir, "manifest.jso
 assert.strictEqual(manifestJson.display, "standalone");
 const iconBuf = fs.readFileSync(path.join(docsDir, "apple-touch-icon.png"));
 assert.deepStrictEqual(Array.from(iconBuf.slice(0, 4)), [0x89, 0x50, 0x4e, 0x47]);
+assert.ok(docsHtml.indexOf("ccQuickAmounts") !== -1, "docs/index.html must include CC quick fill controls");
+assert.ok(docsHtml.indexOf("submitReconcile") !== -1, "docs/index.html must include wallet reconciliation control");
 
-console.log("32 assertions passed (formulas, wallet reconciliation, payload normalization & Pages PWA build).");
+// 6. Live Card Due & Bank/Cash Opening Anchor Calibration
+assert.strictEqual(computeRemainingCardDue(8729.16, 0, "⏳ Pending Payment"), 8729.16);
+assert.strictEqual(computeRemainingCardDue(8729.16, 5000, "⏳ Pending Payment"), 3729.16);
+assert.strictEqual(computeRemainingCardDue(8729.16, 8729.16, "⏳ Pending Payment"), 0);
+assert.strictEqual(computeRemainingCardDue(8729.16, 32618.95, "⏳ Pending Payment"), 0);
+assert.strictEqual(computeRemainingCardDue(8729.16, 0, "✅ Paid"), 0);
+assert.strictEqual(computeCalibratedAnchor(-35019.42, 20280.16, 627.78), -54671.8);
+
+console.log("40 assertions passed (formulas, wallet reconciliation, payload normalization, card due & Pages PWA build).");

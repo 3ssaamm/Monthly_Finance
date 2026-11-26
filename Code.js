@@ -7,6 +7,7 @@ function onOpen() {
   ui.createMenu("💰 Personal Finance")
     .addItem("📧 Email Mobile Link to My iPhone", "menuSendMobileLinkEmail")
     .addItem("🔑 Rotate Mobile Access Key", "menuRotateMobileKey")
+    .addItem("⚖️ Sync Expected Bank/Cash to Actual", "menuReconcileWallets")
     .addItem("📱 Open Quick-Entry Sidebar", "showQuickEntrySidebar")
     .addItem("🔄 Sync NBE Credit Card V2", "menuSyncNbeCard")
     .addItem("🔔 Check Budget Alerts Now", "menuCheckBudgetAlerts")
@@ -129,6 +130,15 @@ function menuRotateMobileKey() {
   SpreadsheetApp.getUi().alert(
     `🔑 Rotated Mobile Access Key (${res.keyPreview}) and stored privately in ScriptProperties.\n\n` +
     `New private Quick-Entry link emailed to:\n${res.recipients.join(", ")}`
+  );
+}
+
+function menuReconcileWallets() {
+  const res = reconcileWalletsToActual_(SpreadsheetApp.getActiveSpreadsheet(), { useSheetActuals: true });
+  SpreadsheetApp.getUi().alert(
+    `⚖️ Synced Expected Balances to Actual (Variance = EGP 0.00):\n` +
+    `• Bank / InstaPay: EGP ${Number(res.targetBank || 0).toFixed(2)}\n` +
+    `• Cash on Hand: EGP ${Number(res.targetCash || 0).toFixed(2)}`
   );
 }
 

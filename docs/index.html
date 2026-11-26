@@ -100,6 +100,7 @@
         <label>Type</label>
         <div class="chips" id="typeChips"></div>
         <div id="txTypeHint" class="type-hint hidden"></div>
+        <div id="ccQuickAmounts" class="chips hidden" style="margin-top:6px;"></div>
 
         <div id="txCatGroup">
           <label>Category</label>
@@ -196,6 +197,14 @@
         <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;">
         <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Active Loan Balances</div>
         <div id="loanBalancesList"></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;">
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px;">⚖️ Reconcile Bank & Cash</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Sets your opening anchor so Expected matches your real balance without creating fake income or expenses.</div>
+        <label>Actual Bank / InstaPay Balance (EGP)</label>
+        <input id="recBank" type="text" inputmode="decimal" placeholder="Leave blank to keep Bank as-is">
+        <label>Actual Cash on Hand (EGP)</label>
+        <input id="recCash" type="text" inputmode="decimal" placeholder="Leave blank to keep Cash as-is">
+        <button class="btn" id="recBtn" onclick="submitReconcile()">Sync Expected to Actual</button>
       </div>
     </div>
   </div>
@@ -226,6 +235,8 @@
 
     let state = null;
     let selectedType = "Expense";
+    let prevSelectedType = "Expense";
+    let autoFilledCcValue = "";
     let selectedCat = "Entertainment";
     let selectedWallet = "Bank / InstaPay";
     let selectedAsset = "Thndr FI Funds";
@@ -286,6 +297,8 @@
       const catGroup = document.getElementById("txCatGroup");
       const walletGroup = document.getElementById("txWalletGroup");
       const hintEl = document.getElementById("txTypeHint");
+      const ccQuickEl = document.getElementById("ccQuickAmounts");
+      const amountEl = document.getElementById("txAmount");
       const detailsEl = document.getElementById("txDetails");
 
       let availableWallets = (s && s.wallets) || ["Bank / InstaPay", "Cash", "NBE Credit Card"];
@@ -308,8 +321,49 @@
         showCat = false;
         availableWallets = ["Bank / InstaPay", "Cash"];
         if (selectedWallet === "NBE Credit Card") selectedWallet = "Bank / InstaPay";
-        hint = "Pays your NBE Credit Card bill from Bank or Cash. Does not double-count expenses.";
+        const myDue = Number((s && s.midoCardDue) || 0);
+        const totalBill = Number((s && s.nbeTotalBill) || 0);
+        const cycle = (s && s.nbeCycle) || "Active";
+        const dueDate = (s && s.nbeDueDate) ? " (due " + s.nbeDueDate + ")" : "";
+
+        if (myDue > 0) {
+          hint = `NBE Card (${cycle}): Your share due is ${fmt(myDue)}${dueDate}. Pre-filled below — edit if paying a different amount.`;
+        } else {
+          hint = `✅ Your Mido NBE Card share for ${cycle} is EGP 0.00. Enter an amount only if making an extra payment.`;
+        }
         placeholder = "e.g. NBE Card Bill Payment (optional)";
+
+        ccQuickEl.innerHTML = "";
+        const quickOpts = [];
+        if (myDue > 0) quickOpts.push({ label: `My Share (${fmt(myDue)})`, val: myDue.toFixed(2) });
+        if (totalBill > 0 && Math.abs(totalBill - myDue) > 0.01) {
+          quickOpts.push({ label: `Full Bill (${fmt(totalBill)})`, val: totalBill.toFixed(2) });
+        }
+        if (quickOpts.length > 0) {
+          ccQuickEl.classList.remove("hidden");
+          quickOpts.forEach(opt => {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className = "chip";
+            b.textContent = opt.label;
+            b.onclick = () => {
+              amountEl.value = opt.val;
+              autoFilledCcValue = opt.val;
+            };
+            ccQuickEl.appendChild(b);
+          });
+        } else {
+          ccQuickEl.classList.add("hidden");
+        }
+
+        if (prevSelectedType !== "CC Bill Payment" && myDue > 0) {
+          const curVal = amountEl.value.trim();
+          if (!curVal || curVal === autoFilledCcValue) {
+            const formatted = myDue.toFixed(2);
+            amountEl.value = formatted;
+            autoFilledCcValue = formatted;
+          }
+        }
       } else if (selectedType === "Income") {
         showCat = false;
         availableWallets = ["Bank / InstaPay", "Cash"];
@@ -318,6 +372,16 @@
         placeholder = "e.g. Monthly Salary, Bonus";
       }
 
+      if (selectedType !== "CC Bill Payment") {
+        ccQuickEl.classList.add("hidden");
+        ccQuickEl.innerHTML = "";
+        if (prevSelectedType === "CC Bill Payment" && amountEl.value.trim() === autoFilledCcValue) {
+          amountEl.value = "";
+          autoFilledCcValue = "";
+        }
+      }
+
+      prevSelectedType = selectedType;
       catGroup.classList.toggle("hidden", !showCat);
       walletGroup.classList.toggle("hidden", !showWallet);
       hintEl.classList.toggle("hidden", !hint);
@@ -335,6 +399,11 @@
       document.getElementById("kpiCash").textContent = fmt(s.expectedCash);
       document.getElementById("kpiSpend").textContent = fmt(s.totalSpend);
       document.getElementById("kpiCard").textContent = fmt(s.midoCardDue);
+
+      const recBankEl = document.getElementById("recBank");
+      const recCashEl = document.getElementById("recCash");
+      if (recBankEl) recBankEl.placeholder = "Current Expected: " + fmt(s.expectedBank);
+      if (recCashEl) recCashEl.placeholder = "Current Expected: " + fmt(s.expectedCash);
 
       if (!document.getElementById("txDate").value) document.getElementById("txDate").value = s.today;
       if (!document.getElementById("loanDate").value) document.getElementById("loanDate").value = s.today;
@@ -442,6 +511,7 @@
           else if (action === "logTransaction") runner.apiLogTransaction({ ...payload, key: accessKey });
           else if (action === "logLoan") runner.apiLogLoan({ ...payload, key: accessKey });
           else if (action === "logInvestment") runner.apiLogInvestment({ ...payload, key: accessKey });
+          else if (action === "reconcileWallets") runner.apiReconcileWallets({ ...payload, key: accessKey });
           else invokeFetch();
         } else {
           invokeFetch();
@@ -482,6 +552,7 @@
           btn.textContent = "Save Transaction";
           document.getElementById("txAmount").value = "";
           document.getElementById("txDetails").value = "";
+          autoFilledCcValue = "";
           renderState(res.state);
           if (res.type === "Cash Withdrawal") {
             showToast(`✅ Moved ${fmt(res.amount)} from Bank / InstaPay → Cash.`, "ok");
@@ -574,6 +645,33 @@
         .catch(err => {
           btn.disabled = false;
           btn.textContent = "Save Investment Update";
+          showToast("❌ " + (err.message || err), "danger");
+        });
+    }
+
+    function submitReconcile() {
+      const btn = document.getElementById("recBtn");
+      const actualBank = document.getElementById("recBank").value.trim();
+      const actualCash = document.getElementById("recCash").value.trim();
+      if (!actualBank && !actualCash) {
+        showToast("Enter your Actual Bank or Cash balance to sync.", "danger");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Syncing...";
+      callBackend("reconcileWallets", { actualBank, actualCash })
+        .then(res => {
+          btn.disabled = false;
+          btn.textContent = "Sync Expected to Actual";
+          document.getElementById("recBank").value = "";
+          document.getElementById("recCash").value = "";
+          renderState(res.state);
+          showToast(`✅ Expected balances synced! Bank: ${fmt(res.state.expectedBank)}, Cash: ${fmt(res.state.expectedCash)}.`, "ok");
+        })
+        .catch(err => {
+          btn.disabled = false;
+          btn.textContent = "Sync Expected to Actual";
           showToast("❌ " + (err.message || err), "danger");
         });
     }

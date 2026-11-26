@@ -460,6 +460,17 @@ function normalizeTransactionPayload(payload) {
   };
 }
 
+function computeRemainingCardDue(baseDue, ccPaymentsThisMonth, paymentStatus) {
+  if (/paid/i.test(String(paymentStatus || ""))) return 0;
+  const due = Number(baseDue || 0) - Number(ccPaymentsThisMonth || 0);
+  return Math.max(0, Math.round(due * 100) / 100);
+}
+
+function computeCalibratedAnchor(currentAnchor, currentExpected, targetActual) {
+  const diff = Number(targetActual || 0) - Number(currentExpected || 0);
+  return Math.round((Number(currentAnchor || 0) + diff) * 100) / 100;
+}
+
 function getMasterSpreadsheet_() {
   try {
     const active = (typeof SpreadsheetApp !== "undefined" && SpreadsheetApp.getActiveSpreadsheet)
@@ -492,6 +503,8 @@ if (typeof module !== "undefined" && module.exports) {
     categorizeDescription,
     computeWalletBalances,
     normalizeTransactionPayload,
+    computeRemainingCardDue,
+    computeCalibratedAnchor,
     getMasterSpreadsheet_,
     isValidWebAppKey
   };
