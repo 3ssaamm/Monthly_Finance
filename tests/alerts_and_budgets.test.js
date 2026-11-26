@@ -37,10 +37,13 @@ assert.strictEqual(buildAlertKey("2026-11", "Entertainment", "80"), "PF_ALERT_20
 assert.strictEqual(buildAlertKey("2026-11", "Food", "100"), "PF_ALERT_2026-11_FOOD_100");
 
 // WebApp access key guard
-assert.strictEqual(isValidWebAppKey("pf_mido_9f83c7a2d4e1b6085c3a91e7", "pf_mido_9f83c7a2d4e1b6085c3a91e7"), true);
-assert.strictEqual(isValidWebAppKey("  pf_mido_9f83c7a2d4e1b6085c3a91e7 ", "pf_mido_9f83c7a2d4e1b6085c3a91e7"), true);
-assert.strictEqual(isValidWebAppKey('"pf_mido_9f83c7a2d4e1b6085c3a91e7"', "pf_mido_9f83c7a2d4e1b6085c3a91e7"), true);
-assert.strictEqual(isValidWebAppKey("", "pf_mido_9f83c7a2d4e1b6085c3a91e7"), false);
-assert.strictEqual(isValidWebAppKey("wrong_key", "pf_mido_9f83c7a2d4e1b6085c3a91e7"), false);
+const dummyKey = "pf_test_dummy_key_1234567890";
+assert.strictEqual(isValidWebAppKey(dummyKey, dummyKey), true);
+assert.strictEqual(isValidWebAppKey("  " + dummyKey + " ", dummyKey), true);
+assert.strictEqual(isValidWebAppKey('"' + dummyKey + '"', dummyKey), true);
+assert.strictEqual(isValidWebAppKey("", dummyKey), false);
+assert.strictEqual(isValidWebAppKey("wrong_key", dummyKey), false);
+assert.strictEqual(isValidWebAppKey("", ""), false);
+assert.strictEqual(isValidWebAppKey("anything", ""), false);
 
-console.log("17 assertions passed (budgets, alerts & WebApp key auth).");
+console.log("19 assertions passed (budgets, alerts & WebApp key auth).");

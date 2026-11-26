@@ -6,6 +6,7 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu("💰 Personal Finance")
     .addItem("📧 Email Mobile Link to My iPhone", "menuSendMobileLinkEmail")
+    .addItem("🔑 Rotate Mobile Access Key", "menuRotateMobileKey")
     .addItem("📱 Open Quick-Entry Sidebar", "showQuickEntrySidebar")
     .addItem("🔄 Sync NBE Credit Card V2", "menuSyncNbeCard")
     .addItem("🔔 Check Budget Alerts Now", "menuCheckBudgetAlerts")
@@ -120,6 +121,14 @@ function menuSendMobileLinkEmail() {
   const res = sendMobileLinkEmail();
   SpreadsheetApp.getUi().alert(
     `✅ Mobile Safari Quick-Entry link emailed to:\n${res.recipients.join(", ")}\n\nLink:\n${res.url}`
+  );
+}
+
+function menuRotateMobileKey() {
+  const res = rotateMobileAccessKey_();
+  SpreadsheetApp.getUi().alert(
+    `🔑 Rotated Mobile Access Key (${res.keyPreview}) and stored privately in ScriptProperties.\n\n` +
+    `New private Quick-Entry link emailed to:\n${res.recipients.join(", ")}`
   );
 }
 

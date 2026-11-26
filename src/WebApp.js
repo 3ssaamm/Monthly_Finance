@@ -9,7 +9,21 @@ function getExpectedWebAppKey_() {
       if (saved && String(saved).trim()) return String(saved).trim();
     }
   } catch (_) {}
-  return PF_CONFIG.DEFAULT_WEBAPP_KEY;
+  return String(PF_CONFIG.DEFAULT_WEBAPP_KEY || "").trim();
+}
+
+function rotateMobileAccessKey_() {
+  const newKey = "pf_" + Utilities.getUuid().replace(/-/g, "");
+  PropertiesService.getScriptProperties().setProperty("PF_WEBAPP_KEY", newKey);
+  const state = apiGetDashboardState(newKey, false);
+  const emailRes = sendMobileLinkEmail();
+  return {
+    ok: true,
+    rotated: true,
+    verifiedMonth: state.monthKey,
+    recipients: emailRes.recipients,
+    keyPreview: newKey.slice(0, 6) + "..." + newKey.slice(-4)
+  };
 }
 
 function assertWebAppAuth_(key, isSidebar) {
@@ -79,6 +93,9 @@ function doPost(e) {
     } else if (action === "sendEmail") {
       assertWebAppAuth_(key, false);
       result = { ok: true, ...sendMobileLinkEmail(payload.execUrl) };
+    } else if (action === "rotateKey") {
+      assertWebAppAuth_(key, false);
+      result = rotateMobileAccessKey_();
     } else {
       throw new Error("Unsupported action: " + action);
     }
