@@ -30,7 +30,7 @@ function resolveExecUrl_(optExecUrl) {
 }
 
 function getMobileQuickEntryUrl_(optExecUrl) {
-  const base = resolveExecUrl_(optExecUrl);
+  const base = String(optExecUrl || PF_CONFIG.GITHUB_PAGES_URL || resolveExecUrl_("")).trim();
   if (!base) return "";
   const sep = base.indexOf("?") === -1 ? "?" : "&";
   return `${base}${sep}k=${encodeURIComponent(getExpectedWebAppKey_())}`;
@@ -382,10 +382,10 @@ function sendMobileLinkEmail(optExecUrl) {
         <h2 style="margin:0;font-size:18px;">💰 Personal Financials — iPhone Quick Entry</h2>
       </div>
       <div style="padding:20px 22px;color:#202124;line-height:1.5;">
-        <p style="margin-top:0;">Your Mobile Quick-Entry app is now configured to open directly in <b>iPhone Safari</b> without Google cookie/redirect issues.</p>
+        <p style="margin-top:0;">Your banner-free Mobile Quick-Entry app is now hosted cleanly on GitHub Pages so you can open it directly in <b>iPhone Safari</b> without Google's Apps Script banner or redirect issues.</p>
         <p style="margin:22px 0;text-align:center;">
           <a href="${url}" style="display:inline-block;background:#1b5e20;color:#ffffff;text-decoration:none;font-weight:700;padding:13px 24px;border-radius:10px;font-size:15px;">
-            📱 Open Quick Entry in Safari
+            📱 Open Quick Entry
           </a>
         </p>
         <div style="background:#f1f3f4;border-radius:8px;padding:12px;font-size:12px;word-break:break-all;color:#3c4043;">

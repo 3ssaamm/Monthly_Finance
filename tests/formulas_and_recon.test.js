@@ -1,5 +1,8 @@
+const fs = require("fs");
+const path = require("path");
 const assert = require("assert");
 const {
+  PF_CONFIG,
   evalSimpleMathExpr,
   parseDateStrict,
   formatDateIso,
@@ -106,4 +109,18 @@ const reimb = normalizeTransactionPayload({ type: "Reimbursement", category: "En
 assert.strictEqual(reimb.affectsBudget, true);
 assert.strictEqual(reimb.category, "Entertainment");
 
-console.log("24 assertions passed (formulas, wallet reconciliation & payload normalization).");
+// 5. GitHub Pages PWA build artifacts safety & integrity
+const docsDir = path.resolve(__dirname, "..", "docs");
+const docsHtmlPath = path.join(docsDir, "index.html");
+const docsHtml = fs.readFileSync(docsHtmlPath, "utf8");
+assert.ok(docsHtml.indexOf(PF_CONFIG.WEBAPP_EXEC_URL) !== -1, "docs/index.html must include WEBAPP_EXEC_URL");
+assert.ok(docsHtml.indexOf("./manifest.json") !== -1, "docs/index.html must link manifest.json");
+assert.strictEqual(docsHtml.indexOf("<?"), -1, "docs/index.html must have no unrendered Apps Script template tags");
+assert.strictEqual(docsHtml.indexOf(PF_CONFIG.DEFAULT_WEBAPP_KEY), -1, "docs/index.html must never embed secret key");
+assert.ok(fs.existsSync(path.join(docsDir, ".nojekyll")), "docs/.nojekyll must exist");
+const manifestJson = JSON.parse(fs.readFileSync(path.join(docsDir, "manifest.json"), "utf8"));
+assert.strictEqual(manifestJson.display, "standalone");
+const iconBuf = fs.readFileSync(path.join(docsDir, "apple-touch-icon.png"));
+assert.deepStrictEqual(Array.from(iconBuf.slice(0, 4)), [0x89, 0x50, 0x4e, 0x47]);
+
+console.log("31 assertions passed (formulas, wallet reconciliation, payload normalization & Pages PWA build).");

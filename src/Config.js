@@ -13,6 +13,7 @@ const PF_CONFIG = {
   EMAIL_RECIPIENTS: ["muhammad.essam811@gmail.com", "midoessam704@gmail.com"],
   DEFAULT_WEBAPP_KEY: "pf_mido_9f83c7a2d4e1b6085c3a91e7",
   WEBAPP_EXEC_URL: "https://script.google.com/macros/s/AKfycbx5TOdjYW66TCIjmWC8QSMZQKVj6q1oal4BJVJSMtUFRy_cxNxN8SeT3ek_EdyuCUEIpA/exec",
+  GITHUB_PAGES_URL: "https://3ssaamm.github.io/Monthly_Finance/",
   NBE_CREDIT_ID: "1MLFFa0JI0jatCW1ZE6TXrnA4EjU5p0jY9EWQhxPO8Sc",
   LEGACY_FINANCIALS_ID: "1ZmHxw__xSKC-HFz85svsjuppi1G79-7hG9R-h8Yr4gk",
   NBE_SYNC_START_MONTH: "2026-11",
