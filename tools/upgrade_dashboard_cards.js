@@ -99,6 +99,31 @@ function cfTextContainsRule(sheetId, r1, r2, c1, c2, text, bgHex, fgHex, bold) {
   };
 }
 
+function repeatStyle(sheetId, r1, r2, c1, c2, opts) {
+  const fmt = {
+    verticalAlignment: opts.vAlign || "MIDDLE"
+  };
+  if (opts.bg) fmt.backgroundColor = hexRgb(opts.bg);
+  const tf = {};
+  if (opts.fg) tf.foregroundColor = hexRgb(opts.fg);
+  if (opts.bold !== undefined) tf.bold = Boolean(opts.bold);
+  if (opts.italic !== undefined) tf.italic = Boolean(opts.italic);
+  if (opts.fontSize) tf.fontSize = opts.fontSize;
+  if (Object.keys(tf).length > 0) fmt.textFormat = tf;
+
+  const fieldList = ["userEnteredFormat.verticalAlignment"];
+  if (fmt.backgroundColor) fieldList.push("userEnteredFormat.backgroundColor");
+  if (fmt.textFormat) fieldList.push("userEnteredFormat.textFormat");
+
+  return {
+    repeatCell: {
+      range: { sheetId, startRowIndex: r1, endRowIndex: r2, startColumnIndex: c1, endColumnIndex: c2 },
+      cell: { userEnteredFormat: fmt },
+      fields: fieldList.join(",")
+    }
+  };
+}
+
 function main() {
   const sheets = JSON.parse(runGsheets(["readonly", "list-sheets", SS_ID, "--json"]));
   const findId = name => {
@@ -158,17 +183,17 @@ function main() {
   const rows = [
     // Row 17: Card 1 Banner (I17:N17 merged)
     { values: [
-      strCell("💳 Live NBE Credit Card V2", { bg: C.INFO_FG, fg: "#ffffff", bold: true, fontSize: 10, vAlign: "MIDDLE" }),
-      strCell("", { bg: C.INFO_FG }), strCell("", { bg: C.INFO_FG }), strCell("", { bg: C.INFO_FG }),
-      strCell("", { bg: C.INFO_FG }), strCell("", { bg: C.INFO_FG })
+      strCell("💳 Live NBE Credit Card V2", { bg: C.PRIMARY, fg: "#ffffff", bold: true, fontSize: 10, vAlign: "MIDDLE" }),
+      strCell("", { bg: C.PRIMARY }), strCell("", { bg: C.PRIMARY }), strCell("", { bg: C.PRIMARY }),
+      strCell("", { bg: C.PRIMARY }), strCell("", { bg: C.PRIMARY })
     ]},
     // Row 18: Card 1 Headers (L18:N18 merged)
     { values: [
-      strCell("Card Metric", { bg: C.INFO_BG, fg: C.INFO_FG, bold: true, fontSize: 9, vAlign: "MIDDLE" }),
-      strCell("Value", { bg: C.INFO_BG, fg: C.INFO_FG, bold: true, fontSize: 9, vAlign: "MIDDLE", hAlign: "CENTER" }),
-      strCell("Date / Status", { bg: C.INFO_BG, fg: C.INFO_FG, bold: true, fontSize: 9, vAlign: "MIDDLE", hAlign: "CENTER" }),
-      strCell("Breakdown & Notes", { bg: C.INFO_BG, fg: C.INFO_FG, bold: true, fontSize: 9, vAlign: "MIDDLE" }),
-      strCell("", { bg: C.INFO_BG }), strCell("", { bg: C.INFO_BG })
+      strCell("Card Metric", { bg: C.PRIMARY_LIGHT, fg: C.PRIMARY_DARK, bold: true, fontSize: 9, vAlign: "MIDDLE" }),
+      strCell("Value", { bg: C.PRIMARY_LIGHT, fg: C.PRIMARY_DARK, bold: true, fontSize: 9, vAlign: "MIDDLE", hAlign: "CENTER" }),
+      strCell("Date / Status", { bg: C.PRIMARY_LIGHT, fg: C.PRIMARY_DARK, bold: true, fontSize: 9, vAlign: "MIDDLE", hAlign: "CENTER" }),
+      strCell("Breakdown & Notes", { bg: C.PRIMARY_LIGHT, fg: C.PRIMARY_DARK, bold: true, fontSize: 9, vAlign: "MIDDLE" }),
+      strCell("", { bg: C.PRIMARY_LIGHT }), strCell("", { bg: C.PRIMARY_LIGHT })
     ]},
     // Row 19: Active Billing Cycle
     { values: [
@@ -293,11 +318,52 @@ function main() {
   }
   requests.push({ mergeCells: { range: { sheetId: dashId, startRowIndex: 23, endRowIndex: 24, startColumnIndex: 8, endColumnIndex: 14 }, mergeType: "MERGE_ALL" } });
 
-  // 5. Borders & row/col dimensions
+  // 5. Borders, row/col dimensions & unified styling across ALL dashboard cards
   requests.push(borderGrid(dashId, 16, 22, 8, 14, C.BORDER, "SOLID"));
-  requests.push(borderOuter(dashId, 16, 22, 8, 14, C.INFO_FG));
+  requests.push(borderOuter(dashId, 16, 22, 8, 14, C.PRIMARY));
   requests.push(borderGrid(dashId, 23, 31, 8, 14, C.BORDER, "SOLID"));
   requests.push(borderOuter(dashId, 23, 31, 8, 14, C.PRIMARY));
+
+  // Unify Executive KPI Strip (A5:N6)
+  requests.push(repeatStyle(dashId, 4, 5, 0, 14, { bg: C.PRIMARY_LIGHT, fg: C.PRIMARY_DARK, bold: true, fontSize: 9 }));
+  requests.push(repeatStyle(dashId, 5, 6, 0, 14, { bg: "#ffffff", fg: "#202124", bold: true, fontSize: 12 }));
+  requests.push(borderGrid(dashId, 4, 6, 0, 14, C.BORDER, "SOLID"));
+  requests.push(borderOuter(dashId, 4, 6, 0, 14, C.PRIMARY));
+
+  // Unify Category Spending vs. Budget (A8:G18)
+  requests.push(repeatStyle(dashId, 7, 8, 0, 7, { bg: C.PRIMARY, fg: "#ffffff", bold: true, fontSize: 10 }));
+  requests.push(repeatStyle(dashId, 8, 9, 0, 7, { bg: C.PRIMARY_LIGHT, fg: C.PRIMARY_DARK, bold: true, fontSize: 9 }));
+  for (let r = 9; r < 17; r++) {
+    requests.push(repeatStyle(dashId, r, r + 1, 0, 7, { bg: (r - 9) % 2 === 1 ? C.ROW_ALT : "#ffffff", fg: "#202124", bold: false, fontSize: 10 }));
+  }
+  requests.push(repeatStyle(dashId, 17, 18, 0, 7, { bg: C.SUBHEADER, fg: "#202124", bold: true, fontSize: 10 }));
+  requests.push(borderGrid(dashId, 7, 18, 0, 7, C.BORDER, "SOLID"));
+  requests.push(borderOuter(dashId, 7, 18, 0, 7, C.PRIMARY));
+
+  // Unify Recurring Fixed Bills Checklist (A20:G28)
+  requests.push(repeatStyle(dashId, 19, 20, 0, 7, { bg: C.PRIMARY, fg: "#ffffff", bold: true, fontSize: 10 }));
+  requests.push(repeatStyle(dashId, 20, 21, 0, 7, { bg: C.PRIMARY_LIGHT, fg: C.PRIMARY_DARK, bold: true, fontSize: 9 }));
+  for (let r = 21; r < 28; r++) {
+    requests.push(repeatStyle(dashId, r, r + 1, 0, 7, { bg: (r - 21) % 2 === 1 ? C.ROW_ALT : "#ffffff", fg: "#202124", bold: false, fontSize: 10 }));
+  }
+  requests.push(borderGrid(dashId, 19, 28, 0, 7, C.BORDER, "SOLID"));
+  requests.push(borderOuter(dashId, 19, 28, 0, 7, C.PRIMARY));
+
+  // Unify Bank & Cash Wallet Reconciliation (I8:N12)
+  requests.push(repeatStyle(dashId, 7, 8, 8, 14, { bg: C.PRIMARY, fg: "#ffffff", bold: true, fontSize: 10 }));
+  requests.push(repeatStyle(dashId, 8, 9, 8, 14, { bg: C.PRIMARY_LIGHT, fg: C.PRIMARY_DARK, bold: true, fontSize: 9 }));
+  requests.push(repeatStyle(dashId, 9, 10, 8, 14, { bg: "#ffffff", fg: "#202124", bold: false, fontSize: 10 }));
+  requests.push(repeatStyle(dashId, 10, 11, 8, 14, { bg: C.ROW_ALT, fg: "#202124", bold: false, fontSize: 10 }));
+  requests.push(repeatStyle(dashId, 9, 11, 11, 12, { bg: C.INPUT_BG, fg: "#202124", bold: true, fontSize: 10 }));
+  requests.push(repeatStyle(dashId, 11, 12, 8, 14, { bg: C.SUBHEADER, fg: "#202124", bold: true, fontSize: 10 }));
+  requests.push(borderGrid(dashId, 7, 12, 8, 14, C.BORDER, "SOLID"));
+  requests.push(borderOuter(dashId, 7, 12, 8, 14, C.PRIMARY));
+
+  // Unify Month Spend by Wallet Strip (I14:N15)
+  requests.push(repeatStyle(dashId, 13, 14, 8, 14, { bg: C.PRIMARY_LIGHT, fg: C.PRIMARY_DARK, bold: true, fontSize: 9 }));
+  requests.push(repeatStyle(dashId, 14, 15, 8, 14, { bg: "#ffffff", fg: "#202124", bold: true, fontSize: 10 }));
+  requests.push(borderGrid(dashId, 13, 15, 8, 14, C.BORDER, "SOLID"));
+  requests.push(borderOuter(dashId, 13, 15, 8, 14, C.PRIMARY));
 
   requests.push({
     updateDimensionProperties: {
@@ -321,14 +387,10 @@ function main() {
     }
   });
 
-  // 6. Status badge conditional formatting for Card 1 (K19) and Card 2 (N26:N31)
-  requests.push(cfTextContainsRule(dashId, 18, 19, 10, 11, "Paid", C.OK_BG, C.OK_FG, true));
-  requests.push(cfTextContainsRule(dashId, 18, 19, 10, 11, "Pending", C.WARN_BG, C.WARN_FG, true));
-  requests.push(cfTextContainsRule(dashId, 25, 31, 13, 14, "Active", C.OK_BG, C.OK_FG, true));
-  requests.push(cfTextContainsRule(dashId, 25, 31, 13, 14, "Settled", C.OK_BG, C.OK_FG, true));
-  requests.push(cfTextContainsRule(dashId, 25, 31, 13, 14, "Growing", C.OK_BG, C.OK_FG, true));
-  requests.push(cfTextContainsRule(dashId, 25, 31, 13, 14, "Closed", C.SUBHEADER, C.TEXT_MUTED, false));
-  requests.push(cfTextContainsRule(dashId, 25, 31, 13, 14, "Owed", C.WARN_BG, C.WARN_FG, true));
+  // 6. Status badge conditional formatting for Recurring Bills (G22:G28)
+  requests.push(cfTextContainsRule(dashId, 21, 28, 6, 7, "Paid", C.OK_BG, C.OK_FG, true));
+  requests.push(cfTextContainsRule(dashId, 21, 28, 6, 7, "Due", C.WARN_BG, C.WARN_FG, true));
+  requests.push(cfTextContainsRule(dashId, 21, 28, 6, 7, "Upcoming", C.HEADER, C.TEXT_MUTED, false));
 
   const tmpFile = path.join(os.tmpdir(), `pf_dash_cards_${Date.now()}.json`);
   fs.writeFileSync(tmpFile, JSON.stringify({ requests }), "utf8");
@@ -338,8 +400,8 @@ function main() {
     if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
   }
 
-  console.log("=== VERIFY CARDS (I17:N31) ===");
-  console.log(runGsheets(["readonly", "read", SS_ID, "'Monthly Dashboard'!I17:N31", "--json"]));
+  console.log("=== VERIFY FULL DASHBOARD (A5:N31) ===");
+  console.log(runGsheets(["readonly", "read", SS_ID, "'Monthly Dashboard'!A5:N31", "--json"]));
   console.log("=== VERIFY NET WORTH (L6) ===");
   console.log(runGsheets(["readonly", "read", SS_ID, "'Monthly Dashboard'!L6", "--json"]));
 }

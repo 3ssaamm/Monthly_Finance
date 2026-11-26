@@ -357,7 +357,7 @@ function setupDashboardSheet_(sheet) {
   sheet.getRange("G5:H5").merge().setValue("Safe-to-Spend / Day");
   sheet.getRange("I5:K5").merge().setValue("Liquid Bank & Cash");
   sheet.getRange("L5:N5").merge().setValue("Personal Net Worth");
-  sheet.getRange("A5:N5").setFontWeight("bold").setFontSize(9).setBackground(C.HEADER).setHorizontalAlignment("center");
+  sheet.getRange("A5:N5").setFontWeight("bold").setFontSize(9).setBackground(C.PRIMARY_LIGHT).setFontColor(C.PRIMARY_DARK).setHorizontalAlignment("center").setVerticalAlignment("middle");
 
   sheet.getRange("A6:B6").merge().setFormula('=SUMIFS(Transactions!$F$2:$F,Transactions!$C$2:$C,$G$3,Transactions!$D$2:$D,"Income")');
   sheet.getRange("C6:D6").merge().setFormula('=SUMIFS(Transactions!$F$2:$F,Transactions!$C$2:$C,$G$3,Transactions!$D$2:$D,"Expense")-SUMIFS(Transactions!$F$2:$F,Transactions!$C$2:$C,$G$3,Transactions!$D$2:$D,"Reimbursement")');
@@ -365,13 +365,15 @@ function setupDashboardSheet_(sheet) {
   sheet.getRange("G6:H6").merge().setFormula('=IF($K$3>=1,0,MAX(0,(C18-C6))/MAX(1,DAY(EOMONTH(DATE(B3,MONTH(DATEVALUE(D3&" 1, "&B3)),1),0))-IF(TEXT(TODAY(),"yyyy-mm")=G3,DAY(TODAY()),0)))');
   sheet.getRange("I6:K6").merge().setFormula("=K10+K11");
   sheet.getRange("L6:N6").merge().setFormula("=I6+'Investments'!D8+'Loans & People'!D13-J20");
-  sheet.getRange("A6:N6").setFontWeight("bold").setFontSize(12).setNumberFormat(PF_CONFIG.CURRENCY_FORMAT).setHorizontalAlignment("center").setBackground("#ffffff");
+  sheet.getRange("A6:N6").setFontWeight("bold").setFontSize(12).setNumberFormat(PF_CONFIG.CURRENCY_FORMAT).setHorizontalAlignment("center").setVerticalAlignment("middle").setBackground("#ffffff");
+  sheet.getRange("A5:N6").setBorder(true, true, true, true, true, true, C.BORDER, SpreadsheetApp.BorderStyle.SOLID);
+  sheet.getRange("A5:N6").setBorder(true, true, true, true, null, null, C.PRIMARY, SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
 
   // Left Panel: Category Budget vs Actual (Rows 8-18, Cols A-G)
   sheet.getRange("A8:G8").merge().setValue("📊 Category Spending vs. Budget & Alert Status")
-    .setFontWeight("bold").setFontSize(10).setBackground(C.PRIMARY_LIGHT);
+    .setFontWeight("bold").setFontSize(10).setBackground(C.PRIMARY).setFontColor("#ffffff").setVerticalAlignment("middle");
   sheet.getRange("A9:G9").setValues([["Category", "Actual (EGP)", "Budget (EGP)", "Remaining", "% Used", "Progress", "Alert / Pace"]])
-    .setFontWeight("bold").setFontSize(9).setBackground(C.HEADER);
+    .setFontWeight("bold").setFontSize(9).setBackground(C.PRIMARY_LIGHT).setFontColor(C.PRIMARY_DARK).setVerticalAlignment("middle");
 
   for (let i = 0; i < 8; i++) {
     const r = 10 + i;
@@ -384,19 +386,21 @@ function setupDashboardSheet_(sheet) {
       `=IF(C${r}>0,B${r}/C${r},0)`,
       `=IF(C${r}<=0,"",SPARKLINE(MIN(E${r},1),{"charttype","bar";"max",1;"color1",IF(E${r}>=1,"#d93025",IF(E${r}>='Budgets & Recurring'!C${br},"#f9ab00","#1b5e20"))}))`,
       `=IF(C${r}<=0,"—",IF(E${r}>=1,"🚨 OVER BUDGET",IF(E${r}>='Budgets & Recurring'!C${br},"⚠️ Near Limit",IF(AND($K$3>0,$K$3<1,E${r}>$K$3+'Budgets & Recurring'!$H$9),"🔥 Fast Pace","✅ On Track"))))`
-    ]]);
+    ]]).setBackground(i % 2 === 1 ? C.ROW_ALT : "#ffffff").setVerticalAlignment("middle");
   }
   sheet.getRange("A18:G18").setValues([[
     "TOTAL", "=SUM(B10:B17)", "=SUM(C10:C17)", "=SUM(D10:D17)", "=IF(C18>0,B18/C18,0)", "", '=IF(E18>=1,"🚨 Over Total Budget",IF(E18>=0.8,"⚠️ Near Total Cap","✅ Healthy"))'
-  ]]).setFontWeight("bold").setBackground(C.SUBHEADER);
+  ]]).setFontWeight("bold").setBackground(C.SUBHEADER).setVerticalAlignment("middle");
   sheet.getRange("B10:D18").setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
   sheet.getRange("E10:E18").setNumberFormat("0.0%");
+  sheet.getRange("A8:G18").setBorder(true, true, true, true, true, true, C.BORDER, SpreadsheetApp.BorderStyle.SOLID);
+  sheet.getRange("A8:G18").setBorder(true, true, true, true, null, null, C.PRIMARY, SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
 
   // Left Lower Panel: Recurring Bills Checklist (Rows 20-28, Cols A-G)
   sheet.getRange("A20:G20").merge().setValue("🔁 Monthly Recurring Fixed Bills Checklist")
-    .setFontWeight("bold").setFontSize(10).setBackground(C.PRIMARY_LIGHT);
+    .setFontWeight("bold").setFontSize(10).setBackground(C.PRIMARY).setFontColor("#ffffff").setVerticalAlignment("middle");
   sheet.getRange("A21:G21").setValues([["Bill Name", "Category", "Expected (EGP)", "Paid This Month", "Due Day", "Match Keyword", "Status"]])
-    .setFontWeight("bold").setFontSize(9).setBackground(C.HEADER);
+    .setFontWeight("bold").setFontSize(9).setBackground(C.PRIMARY_LIGHT).setFontColor(C.PRIMARY_DARK).setVerticalAlignment("middle");
   for (let i = 0; i < 7; i++) {
     const r = 22 + i;
     const rr = 17 + i;
@@ -408,15 +412,17 @@ function setupDashboardSheet_(sheet) {
       `='Budgets & Recurring'!D${rr}`,
       `='Budgets & Recurring'!E${rr}`,
       `=IF(D${r}>=C${r}*0.5,"✅ Paid",IF(AND($K$3>0,DAY(TODAY())>E${r}),"⏰ Due / Check","⏳ Upcoming"))`
-    ]]);
+    ]]).setBackground(i % 2 === 1 ? C.ROW_ALT : "#ffffff").setVerticalAlignment("middle");
   }
   sheet.getRange("C22:D28").setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
+  sheet.getRange("A20:G28").setBorder(true, true, true, true, true, true, C.BORDER, SpreadsheetApp.BorderStyle.SOLID);
+  sheet.getRange("A20:G28").setBorder(true, true, true, true, null, null, C.PRIMARY, SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
 
-  // Right Top Panel: Live Bank & Cash Reconciliation (Rows 8-15, Cols I-N)
+  // Right Top Panel: Live Bank & Cash Reconciliation (Rows 8-12, Cols I-N)
   sheet.getRange("I8:N8").merge().setValue("🏦 Live Bank & Cash Wallet Reconciliation")
-    .setFontWeight("bold").setFontSize(10).setBackground(C.PRIMARY_LIGHT);
+    .setFontWeight("bold").setFontSize(10).setBackground(C.PRIMARY).setFontColor("#ffffff").setVerticalAlignment("middle");
   sheet.getRange("I9:N9").setValues([["Wallet", "Opening Anchor", "Expected (EGP)", "Actual (Yellow)", "Variance", "Recon Status"]])
-    .setFontWeight("bold").setFontSize(9).setBackground(C.HEADER);
+    .setFontWeight("bold").setFontSize(9).setBackground(C.PRIMARY_LIGHT).setFontColor(C.PRIMARY_DARK).setVerticalAlignment("middle");
 
   const bankExpectedFormula =
     "='_Archive_Store'!B2" +
@@ -447,16 +453,20 @@ function setupDashboardSheet_(sheet) {
   sheet.getRange("I10:N11").setValues([
     ["Bank / InstaPay", "='_Archive_Store'!B2", bankExpectedFormula, 16584.16, "=L10-K10", '=IF(ABS(M10)<0.05,"✅ Balanced","⚠️ Diff")'],
     ["Cash on Hand", "='_Archive_Store'!B3", cashExpectedFormula, 120.00, "=L11-K11", '=IF(ABS(M11)<0.05,"✅ Balanced","⚠️ Diff")']
-  ]);
+  ]).setVerticalAlignment("middle");
+  sheet.getRange("I10:N10").setBackground("#ffffff");
+  sheet.getRange("I11:N11").setBackground(C.ROW_ALT);
   sheet.getRange("I12:N12").setValues([
     ["TOTAL LIQUID", "=SUM(J10:J11)", "=SUM(K10:K11)", "=SUM(L10:L11)", "=SUM(M10:M11)", '=IF(ABS(M12)<0.05,"✅ All Tied Out","⚠️ Check Diff")']
-  ]).setFontWeight("bold").setBackground(C.SUBHEADER);
+  ]).setFontWeight("bold").setBackground(C.SUBHEADER).setVerticalAlignment("middle");
   sheet.getRange("L10:L11").setBackground(C.INPUT_BG);
   sheet.getRange("J10:M12").setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
+  sheet.getRange("I8:N12").setBorder(true, true, true, true, true, true, C.BORDER, SpreadsheetApp.BorderStyle.SOLID);
+  sheet.getRange("I8:N12").setBorder(true, true, true, true, null, null, C.PRIMARY, SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
 
   // Spend by Wallet Breakdown (Rows 14-15, Cols I-N)
   sheet.getRange("I14:N14").setValues([["Month Spend by Wallet:", "Bank / InstaPay", "Cash", "NBE Credit Card", "Loan Receivables", "Personal Invest."]])
-    .setFontWeight("bold").setFontSize(9).setBackground(C.HEADER);
+    .setFontWeight("bold").setFontSize(9).setBackground(C.PRIMARY_LIGHT).setFontColor(C.PRIMARY_DARK).setVerticalAlignment("middle");
   sheet.getRange("I15:N15").setFormulas([[
     "=$G$3",
     '=SUMIFS(Transactions!$F$2:$F,Transactions!$C$2:$C,$G$3,Transactions!$D$2:$D,"Expense",Transactions!$G$2:$G,"Bank / InstaPay")',
@@ -464,17 +474,19 @@ function setupDashboardSheet_(sheet) {
     '=SUMIFS(Transactions!$F$2:$F,Transactions!$C$2:$C,$G$3,Transactions!$D$2:$D,"Expense",Transactions!$G$2:$G,"NBE Credit Card")',
     "='Loans & People'!D13",
     "='Investments'!D8"
-  ]]);
+  ]]).setBackground("#ffffff").setFontWeight("bold").setVerticalAlignment("middle");
   sheet.getRange("J15:N15").setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
+  sheet.getRange("I14:N15").setBorder(true, true, true, true, true, true, C.BORDER, SpreadsheetApp.BorderStyle.SOLID);
+  sheet.getRange("I14:N15").setBorder(true, true, true, true, null, null, C.PRIMARY, SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
 
   // Right Lower Card 1: Live NBE Credit Card V2 (Rows 17-22, Cols I-N)
   sheet.getRange("I17:N31").breakApart().setBackground(null).setBorder(false, false, false, false, false, false);
 
   sheet.getRange("I17:N17").merge().setValue("💳 Live NBE Credit Card V2")
-    .setFontWeight("bold").setFontSize(10).setBackground(C.INFO_FG).setFontColor("#ffffff");
+    .setFontWeight("bold").setFontSize(10).setBackground(C.PRIMARY).setFontColor("#ffffff").setVerticalAlignment("middle");
   sheet.getRange("I18:K18").setValues([["Card Metric", "Value", "Date / Status"]]);
   sheet.getRange("L18:N18").merge().setValue("Breakdown & Notes");
-  sheet.getRange("I18:N18").setFontWeight("bold").setFontSize(9).setBackground(C.INFO_BG).setFontColor(C.INFO_FG);
+  sheet.getRange("I18:N18").setFontWeight("bold").setFontSize(9).setBackground(C.PRIMARY_LIGHT).setFontColor(C.PRIMARY_DARK).setVerticalAlignment("middle");
 
   const cardRows = [
     ["Active Billing Cycle", "='_NBE_Cache'!B2", '=IF(J20<=0.01,"✅ Mido Paid",\'_NBE_Cache\'!B5)', '="Statement: "&TEXT(\'_NBE_Cache\'!B3,"yyyy-mm-dd")&"  •  Synced: "&TEXT(\'_NBE_Cache\'!B10,"mmm d, hh:mm")'],
@@ -495,7 +507,7 @@ function setupDashboardSheet_(sheet) {
   sheet.getRange("J19:K22").setHorizontalAlignment("center");
   sheet.getRange("L19:N22").setFontColor(C.TEXT_MUTED).setFontStyle("italic").setFontSize(9);
   sheet.getRange("I17:N22").setBorder(true, true, true, true, true, true, C.BORDER, SpreadsheetApp.BorderStyle.SOLID);
-  sheet.getRange("I17:N22").setBorder(true, true, true, true, null, null, C.INFO_FG, SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+  sheet.getRange("I17:N22").setBorder(true, true, true, true, null, null, C.PRIMARY, SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
 
   // Row 23 left blank on right side as clean visual spacer between Card 1 and Card 2
 
@@ -537,7 +549,9 @@ function setupDashboardSheet_(sheet) {
   rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Balanced").setBackground(C.OK_BG).setFontColor(C.OK_FG).setBold(true).setRanges([sheet.getRange("N10:N12")]).build());
   rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Tied Out").setBackground(C.OK_BG).setFontColor(C.OK_FG).setBold(true).setRanges([sheet.getRange("N10:N12")]).build());
   rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Diff").setBackground(C.ALERT_BG).setFontColor(C.ALERT_FG).setBold(true).setRanges([sheet.getRange("N10:N12")]).build());
-  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Paid").setBackground(C.OK_BG).setFontColor(C.OK_FG).setBold(true).setRanges([sheet.getRange("K19")]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Paid").setBackground(C.OK_BG).setFontColor(C.OK_FG).setBold(true).setRanges([sheet.getRange("K19"), sheet.getRange("G22:G28")]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Due").setBackground(C.WARN_BG).setFontColor(C.WARN_FG).setBold(true).setRanges([sheet.getRange("G22:G28")]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Upcoming").setBackground(C.HEADER).setFontColor(C.TEXT_MUTED).setRanges([sheet.getRange("G22:G28")]).build());
   rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Pending").setBackground(C.WARN_BG).setFontColor(C.WARN_FG).setBold(true).setRanges([sheet.getRange("K19")]).build());
   rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Active").setBackground(C.OK_BG).setFontColor(C.OK_FG).setBold(true).setRanges([sheet.getRange("N26:N31")]).build());
   rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Settled").setBackground(C.OK_BG).setFontColor(C.OK_FG).setBold(true).setRanges([sheet.getRange("N26:N31")]).build());

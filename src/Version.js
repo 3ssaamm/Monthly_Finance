@@ -4,9 +4,9 @@
  */
 function getCodeVersionInfo() {
   return {
-    gitSha: "e106e0f",
+    gitSha: "9bd1258",
     dirty: true,
-    stampedAt: "2026-11-26T19:36:00.893Z"
+    stampedAt: "2026-11-26T19:49:48.520Z"
   };
 }
 
