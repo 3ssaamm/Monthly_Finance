@@ -283,6 +283,22 @@ function parseDateStrict(rawDate, tz) {
     }
   }
 
+  const jsDateWord = s.match(/^(?:[a-zA-Z]{3}\s+)?([a-zA-Z]{3})\s+(\d{1,2})\s+(\d{4})/);
+  if (jsDateWord) {
+    const mIdx = months.indexOf(jsDateWord[1].toLowerCase());
+    if (mIdx >= 0) {
+      return new Date(Date.UTC(parseInt(jsDateWord[3], 10), mIdx, parseInt(jsDateWord[2], 10), 12, 0, 0));
+    }
+  }
+
+  const monthYearWord = s.match(/^([a-zA-Z]{3,9})\s+(\d{4})$/);
+  if (monthYearWord) {
+    const mIdx = months.indexOf(monthYearWord[1].toLowerCase().slice(0, 3));
+    if (mIdx >= 0) {
+      return new Date(Date.UTC(parseInt(monthYearWord[2], 10), mIdx, 1, 12, 0, 0));
+    }
+  }
+
   const ts = Date.parse(s);
   if (!isNaN(ts)) {
     const dObj = new Date(ts);
@@ -297,6 +313,23 @@ function formatDateIso(dateObj) {
   const m = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
   const d = String(dateObj.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function formatMonthYear(rawVal, tz) {
+  const d = parseDateStrict(rawVal, tz);
+  if (!d) return "";
+  const names = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  return `${names[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+function formatHumanDate(rawVal, tz) {
+  const d = parseDateStrict(rawVal, tz);
+  if (!d) return "";
+  const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${shortMonths[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
 }
 
 function toMonthKey(rawDate, tz) {
@@ -498,6 +531,8 @@ if (typeof module !== "undefined" && module.exports) {
     evalSimpleMathExpr,
     parseDateStrict,
     formatDateIso,
+    formatMonthYear,
+    formatHumanDate,
     toMonthKey,
     normalizePersonName,
     categorizeDescription,

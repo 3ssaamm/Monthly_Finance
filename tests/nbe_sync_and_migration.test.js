@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { categorizeDescription } = require("../src/Config");
+const { categorizeDescription, formatMonthYear, formatHumanDate } = require("../src/Config");
 const { parseNbeActiveBillGrid, buildMidoNbeSyncRows } = require("../src/SyncNBE");
 const { normalizeLegacyExpenseRow, normalizeLegacyAbdoRow } = require("../src/Migration");
 
@@ -44,6 +44,19 @@ assert.strictEqual(parsed.midoShareDue, 8729.16);
 assert.strictEqual(parsed.midoNextForecast, 8339.77);
 assert.strictEqual(parsed.familyPendingShares, 1110.86);
 
+const dateObjGrid = [
+  ["Statement Date:", new Date(Date.UTC(2026, 9, 31, 12, 0, 0)), "Bank Closing Bill:", 32618.95],
+  ["Payment Due Date:", new Date(Date.UTC(2026, 10, 27, 12, 0, 0)), "Family Shares Total:", 32619.44],
+  ["Active Billing Cycle:", new Date(Date.UTC(2026, 10, 1, 12, 0, 0)), "", "", "", "", "Payment Status:", "⏳ Pending Payment"]
+];
+const parsedDateObjs = parseNbeActiveBillGrid(dateObjGrid, []);
+assert.strictEqual(parsedDateObjs.activeCycle, "November 2026");
+assert.strictEqual(parsedDateObjs.paymentDueDate, "Nov 27, 2026");
+assert.strictEqual(parsedDateObjs.statementDate, "2026-10-31");
+assert.strictEqual(formatMonthYear("November 2026"), "November 2026");
+assert.strictEqual(formatMonthYear("Sun Nov 01 2026 00:00:00 GMT+0200 (Eastern European Standard Time)"), "November 2026");
+assert.strictEqual(formatHumanDate("Fri Nov 27 2026 00:00:00 GMT+0200 (Eastern European Standard Time)"), "Nov 27, 2026");
+
 const synced = buildMidoNbeSyncRows({
   txRows: [
     ["#", "Date", "Desc", "Payer", "Amount", "", "_Row_ID"],
@@ -62,4 +75,4 @@ assert.strictEqual(synced[0].sourceId, "NBE-TX-T-00350");
 assert.strictEqual(synced[0].category, "Food");
 assert.strictEqual(synced[0].wallet, "NBE Credit Card");
 
-console.log("17 assertions passed (NBE sync & migration).");
+console.log("23 assertions passed (NBE sync & migration).");

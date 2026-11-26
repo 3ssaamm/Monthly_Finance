@@ -38,8 +38,8 @@ function parseNbeActiveBillGrid(activeGrid, forecastGrid) {
       const label = String(row[c] || "").trim().replace(/:$/, "");
       const val = row[c + 1];
       if (label === "Statement Date") summary.statementDate = formatDateIso(parseDateStrict(val)) || String(val || "").trim();
-      else if (label === "Payment Due Date") summary.paymentDueDate = String(val || "").trim();
-      else if (label === "Active Billing Cycle") summary.activeCycle = String(val || "").trim();
+      else if (label === "Payment Due Date") summary.paymentDueDate = formatHumanDate(val) || String(val || "").trim();
+      else if (label === "Active Billing Cycle") summary.activeCycle = formatMonthYear(val) || String(val || "").trim();
       else if (label === "Payment Status") summary.paymentStatus = String(val || "").trim();
       else if (label === "Bank Closing Bill") summary.bankClosingBill = parseNbeMoneyCell_(val);
       else if (label === "Family Shares Total") summary.familySharesTotal = parseNbeMoneyCell_(val);

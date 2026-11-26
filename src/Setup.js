@@ -467,27 +467,68 @@ function setupDashboardSheet_(sheet) {
   ]]);
   sheet.getRange("J15:N15").setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
 
-  // Right Lower Panel: Live NBE Credit Card V2 & Wealth Snapshot (Rows 17-28, Cols I-N)
-  sheet.getRange("I17:N17").merge().setValue("💳 Live NBE Credit Card V2 & Wealth Snapshot")
-    .setFontWeight("bold").setFontSize(10).setBackground(C.INFO_BG);
-  sheet.getRange("I18:N18").setValues([["Metric", "Value", "Detail", "Metric", "Value", "Profit / Status"]])
-    .setFontWeight("bold").setFontSize(9).setBackground(C.HEADER);
+  // Right Lower Card 1: Live NBE Credit Card V2 (Rows 17-22, Cols I-N)
+  sheet.getRange("I17:N31").breakApart().setBackground(null).setBorder(false, false, false, false, false, false);
 
-  sheet.getRange("I19:N23").setValues([
-    ["Active Card Cycle", "='_NBE_Cache'!B2", "='_NBE_Cache'!B5", "USD Cash ($100)", "='Investments'!D5", "='Investments'!E5"],
-    ["Mido Card Share Due", '=IF(ISNUMBER(SEARCH("Paid",\'_NBE_Cache\'!B5)),0,MAX(0,\'_NBE_Cache\'!B7-SUMIFS(Transactions!$F$2:$F,Transactions!$C$2:$C,$G$3,Transactions!$D$2:$D,"CC Bill Payment")))', "='_NBE_Cache'!B4", "Thndr Cloud", "='Investments'!D6", "='Investments'!E6"],
-    ["Mido Next Forecast", "='_NBE_Cache'!B8", "Next Cycle Est.", "Thndr FI Funds", "='Investments'!D7", "='Investments'!E7"],
-    ["Total Bank Closing Bill", "='_NBE_Cache'!B6", "Full Card Statement", "Abdo Loan Owed", "='Loans & People'!D5", "='Loans & People'!F5"],
-    ["Family Shares (Excl Mido)", "='_NBE_Cache'!B9", "='_NBE_Cache'!B10", "Dad & Others", "='Loans & People'!D13-'Loans & People'!D5", '=IF(M23>0,"⏳ Pending","✅ Settled")']
-  ]);
-  sheet.getRange("J20:J23").setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
-  sheet.getRange("M19:N22").setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
-  sheet.getRange("M23").setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
+  sheet.getRange("I17:N17").merge().setValue("💳 Live NBE Credit Card V2")
+    .setFontWeight("bold").setFontSize(10).setBackground(C.INFO_FG).setFontColor("#ffffff");
+  sheet.getRange("I18:K18").setValues([["Card Metric", "Value", "Date / Status"]]);
+  sheet.getRange("L18:N18").merge().setValue("Breakdown & Notes");
+  sheet.getRange("I18:N18").setFontWeight("bold").setFontSize(9).setBackground(C.INFO_BG).setFontColor(C.INFO_FG);
+
+  const cardRows = [
+    ["Active Billing Cycle", "='_NBE_Cache'!B2", '=IF(J20<=0.01,"✅ Mido Paid",\'_NBE_Cache\'!B5)', '="Statement: "&TEXT(\'_NBE_Cache\'!B3,"yyyy-mm-dd")&"  •  Synced: "&TEXT(\'_NBE_Cache\'!B10,"mmm d, hh:mm")'],
+    ["Mido Share Due Now", '=IF(ISNUMBER(SEARCH("Paid",\'_NBE_Cache\'!B5)),0,MAX(0,\'_NBE_Cache\'!B7-SUMIFS(Transactions!$F$2:$F,Transactions!$C$2:$C,$G$3,Transactions!$D$2:$D,"CC Bill Payment")))', "='_NBE_Cache'!B4", '=IF(J20<=0.01,"✅ Settled (original share EGP "&TEXT(\'_NBE_Cache\'!B7,"#,##0.00")&")","⏳ Remaining of EGP "&TEXT(\'_NBE_Cache\'!B7,"#,##0.00")&" share")'],
+    ["Mido Next Cycle Forecast", "='_NBE_Cache'!B8", "Next Cycle Est.", "Estimated Mido purchases + installments next month"],
+    ["Full Bank Closing Bill", "='_NBE_Cache'!B6", '="Family: EGP "&TEXT(\'_NBE_Cache\'!B9,"#,##0.00")', '="Full NBE statement (Mido "&TEXT(IF(J22>0,\'_NBE_Cache\'!B7/J22,0),"0.0%")&"  •  Family "&TEXT(IF(J22>0,\'_NBE_Cache\'!B9/J22,0),"0.0%")&")"']
+  ];
+  for (let i = 0; i < cardRows.length; i++) {
+    const r = 19 + i;
+    sheet.getRange(r, 9, 1, 3).setValues([[cardRows[i][0], cardRows[i][1], cardRows[i][2]]]);
+    sheet.getRange(r, 12, 1, 3).merge().setValue(cardRows[i][3]);
+  }
+  sheet.getRange("I19:N22").setBackground("#ffffff").setVerticalAlignment("middle");
+  sheet.getRange("I21:N21").setBackground(C.ROW_ALT);
+  sheet.getRange("I20:N20").setBackground("#f1f8f4");
+  sheet.getRange("I20:J20").setFontWeight("bold");
+  sheet.getRange("J20:J22").setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
+  sheet.getRange("J19:K22").setHorizontalAlignment("center");
+  sheet.getRange("L19:N22").setFontColor(C.TEXT_MUTED).setFontStyle("italic").setFontSize(9);
+  sheet.getRange("I17:N22").setBorder(true, true, true, true, true, true, C.BORDER, SpreadsheetApp.BorderStyle.SOLID);
+  sheet.getRange("I17:N22").setBorder(true, true, true, true, null, null, C.INFO_FG, SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+
+  // Row 23 left blank on right side as clean visual spacer between Card 1 and Card 2
+
+  // Right Lower Card 2: Personal Investments & Receivables (Rows 24-31, Cols I-N)
+  sheet.getRange("I24:N24").merge().setValue("📈 Personal Investments & Receivables")
+    .setFontWeight("bold").setFontSize(10).setBackground(C.PRIMARY).setFontColor("#ffffff");
+  sheet.getRange("I25:N25").setValues([["Asset / Person", "Principal / Lent", "Current Value", "Profit / Repaid", "Return %", "Status"]])
+    .setFontWeight("bold").setFontSize(9).setBackground(C.PRIMARY_LIGHT).setFontColor(C.PRIMARY_DARK);
+
+  const wealthRows = [
+    ["USD Cash ($100)", "=Investments!C5", "=Investments!D5", "=Investments!E5", "=Investments!F5", '=IF(K26>0,"💵 Active","✅ Closed")'],
+    ["Thndr Cloud", "=Investments!C6", "=Investments!D6", "=Investments!E6", "=Investments!F6", '=IF(K27>0,"📈 Active","✅ Closed")'],
+    ["Thndr FI Funds", "=Investments!C7", "=Investments!D7", "=Investments!E7", "=Investments!F7", '=IF(K28>0,"📈 Active","✅ Closed")'],
+    ["Abdo (Loan Receivable)", "='Loans & People'!B5", "='Loans & People'!D5", "='Loans & People'!C5", "=IF(J29>0,L29/J29,0)", "='Loans & People'!F5"],
+    ["Dad & Others (Loans)", "='Loans & People'!B13-'Loans & People'!B5", "='Loans & People'!D13-'Loans & People'!D5", "='Loans & People'!C13-'Loans & People'!C5", "=IF(J30>0,L30/J30,0)", '=IF(K30>0.01,"⏳ Owed to Me","✅ Settled")'],
+    ["TOTAL WEALTH ASSETS", "=SUM(J26:J30)", "=SUM(K26:K30)", "=Investments!E8", "=IF(Investments!C8>0,Investments!E8/Investments!C8,0)", '=IF(K31>0,"🟢 Growing","—")']
+  ];
+  sheet.getRange("I26:N31").setValues(wealthRows).setVerticalAlignment("middle");
+  sheet.getRange("I26:N30").setBackground("#ffffff");
+  sheet.getRange("I27:N27").setBackground(C.ROW_ALT);
+  sheet.getRange("I29:N29").setBackground(C.ROW_ALT);
+  sheet.getRange("I31:N31").setFontWeight("bold").setBackground(C.SUBHEADER);
+  sheet.getRange("K26:K31").setFontWeight("bold");
+  sheet.getRange("J26:L31").setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
+  sheet.getRange("M26:M31").setNumberFormat("0.0%");
+  sheet.getRange("N26:N31").setHorizontalAlignment("center");
+  sheet.getRange("I24:N31").setBorder(true, true, true, true, true, true, C.BORDER, SpreadsheetApp.BorderStyle.SOLID);
+  sheet.getRange("I24:N31").setBorder(true, true, true, true, null, null, C.PRIMARY, SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
 
   sheet.setFrozenRows(3);
-  [165, 110, 115, 110, 75, 115, 135, 22, 180, 115, 145, 130, 115, 125].forEach((w, i) => sheet.setColumnWidth(i + 1, w));
+  [165, 110, 115, 110, 75, 115, 135, 22, 185, 125, 145, 130, 115, 135].forEach((w, i) => sheet.setColumnWidth(i + 1, w));
 
-  // Conditional formatting for Alert/Pace & Recon badges
+  // Conditional formatting for Alert/Pace, Recon & Snapshot badges
   const rules = [];
   rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("OVER BUDGET").setBackground(C.ALERT_BG).setFontColor(C.ALERT_FG).setBold(true).setRanges([sheet.getRange("G10:G18")]).build());
   rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Near Limit").setBackground(C.WARN_BG).setFontColor(C.WARN_FG).setBold(true).setRanges([sheet.getRange("G10:G18")]).build());
@@ -496,6 +537,13 @@ function setupDashboardSheet_(sheet) {
   rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Balanced").setBackground(C.OK_BG).setFontColor(C.OK_FG).setBold(true).setRanges([sheet.getRange("N10:N12")]).build());
   rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Tied Out").setBackground(C.OK_BG).setFontColor(C.OK_FG).setBold(true).setRanges([sheet.getRange("N10:N12")]).build());
   rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Diff").setBackground(C.ALERT_BG).setFontColor(C.ALERT_FG).setBold(true).setRanges([sheet.getRange("N10:N12")]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Paid").setBackground(C.OK_BG).setFontColor(C.OK_FG).setBold(true).setRanges([sheet.getRange("K19")]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Pending").setBackground(C.WARN_BG).setFontColor(C.WARN_FG).setBold(true).setRanges([sheet.getRange("K19")]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Active").setBackground(C.OK_BG).setFontColor(C.OK_FG).setBold(true).setRanges([sheet.getRange("N26:N31")]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Settled").setBackground(C.OK_BG).setFontColor(C.OK_FG).setBold(true).setRanges([sheet.getRange("N26:N31")]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Closed").setBackground(C.SUBHEADER).setFontColor(C.TEXT_MUTED).setRanges([sheet.getRange("N26:N31")]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Growing").setBackground(C.OK_BG).setFontColor(C.OK_FG).setBold(true).setRanges([sheet.getRange("N26:N31")]).build());
+  rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextContains("Owed").setBackground(C.WARN_BG).setFontColor(C.WARN_FG).setBold(true).setRanges([sheet.getRange("N26:N31")]).build());
   sheet.setConditionalFormatRules(rules);
 }
 
