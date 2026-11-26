@@ -54,6 +54,7 @@
     .budget-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
     .bar-bg { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
     .bar-fill { height: 100%; border-radius: 999px; transition: width .25s ease; }
+    .type-hint { background: var(--primary-light); color: var(--primary); font-size: 12px; font-weight: 600; padding: 8px 10px; border-radius: 8px; margin-top: 8px; line-height: 1.35; }
     .hidden { display: none; }
   </style>
 </head>
@@ -93,15 +94,20 @@
       <div id="tab-tx" class="card">
         <label>Type</label>
         <div class="chips" id="typeChips"></div>
+        <div id="txTypeHint" class="type-hint hidden"></div>
 
-        <label>Category</label>
-        <div class="chips" id="catChips"></div>
+        <div id="txCatGroup">
+          <label>Category</label>
+          <div class="chips" id="catChips"></div>
+        </div>
 
         <label>Amount (EGP) — supports math like 120+45</label>
         <input id="txAmount" type="text" inputmode="decimal" placeholder="e.g. 250 or 120+45">
 
-        <label>Wallet</label>
-        <div class="chips" id="walletChips"></div>
+        <div id="txWalletGroup">
+          <label>Wallet</label>
+          <div class="chips" id="walletChips"></div>
+        </div>
 
         <label>Details / Merchant</label>
         <input id="txDetails" type="text" placeholder="e.g. Coffee, Out, Uber, Gym">
@@ -262,6 +268,50 @@
       });
     }
 
+    function updateTxFieldVisibility(s) {
+      const catGroup = document.getElementById("txCatGroup");
+      const walletGroup = document.getElementById("txWalletGroup");
+      const hintEl = document.getElementById("txTypeHint");
+      const detailsEl = document.getElementById("txDetails");
+
+      let availableWallets = (s && s.wallets) || ["Bank / InstaPay", "Cash", "NBE Credit Card"];
+      let showCat = true;
+      let showWallet = true;
+      let hint = "";
+      let placeholder = "e.g. Coffee, Out, Uber, Gym";
+
+      if (selectedType === "Cash Withdrawal") {
+        showCat = false;
+        showWallet = false;
+        hint = "Moves money from Bank / InstaPay → Cash on Hand. Does not count as an expense.";
+        placeholder = "e.g. ATM Withdrawal (optional)";
+      } else if (selectedType === "Bank Deposit") {
+        showCat = false;
+        showWallet = false;
+        hint = "Moves money from Cash on Hand → Bank / InstaPay. Does not count as an expense.";
+        placeholder = "e.g. ATM / Branch Deposit (optional)";
+      } else if (selectedType === "CC Bill Payment") {
+        showCat = false;
+        availableWallets = ["Bank / InstaPay", "Cash"];
+        if (selectedWallet === "NBE Credit Card") selectedWallet = "Bank / InstaPay";
+        hint = "Pays your NBE Credit Card bill from Bank or Cash. Does not double-count expenses.";
+        placeholder = "e.g. NBE Card Bill Payment (optional)";
+      } else if (selectedType === "Income") {
+        showCat = false;
+        availableWallets = ["Bank / InstaPay", "Cash"];
+        if (selectedWallet === "NBE Credit Card") selectedWallet = "Bank / InstaPay";
+        hint = "Adds income to your selected wallet (auto-categorized as Salary / Income).";
+        placeholder = "e.g. Monthly Salary, Bonus";
+      }
+
+      catGroup.classList.toggle("hidden", !showCat);
+      walletGroup.classList.toggle("hidden", !showWallet);
+      hintEl.classList.toggle("hidden", !hint);
+      hintEl.textContent = hint;
+      detailsEl.placeholder = placeholder;
+      return availableWallets;
+    }
+
     function renderState(s) {
       showAppBody();
       state = s;
@@ -275,7 +325,9 @@
       if (!document.getElementById("loanDate").value) document.getElementById("loanDate").value = s.today;
       if (!document.getElementById("invDate").value) document.getElementById("invDate").value = s.today;
 
-      renderChips("typeChips", ["Expense", "Income", "Reimbursement", "Cash Withdrawal", "CC Bill Payment"], selectedType, v => {
+      const availableWallets = updateTxFieldVisibility(s);
+
+      renderChips("typeChips", ["Expense", "Income", "Reimbursement", "Cash Withdrawal", "Bank Deposit", "CC Bill Payment"], selectedType, v => {
         selectedType = v;
         renderState(state);
       });
@@ -283,7 +335,7 @@
         selectedCat = v;
         renderState(state);
       });
-      renderChips("walletChips", s.wallets, selectedWallet, v => {
+      renderChips("walletChips", availableWallets, selectedWallet, v => {
         selectedWallet = v;
         renderState(state);
       });
@@ -416,7 +468,15 @@
           document.getElementById("txAmount").value = "";
           document.getElementById("txDetails").value = "";
           renderState(res.state);
-          if (res.catStatus && res.catStatus.severity === "over") {
+          if (res.type === "Cash Withdrawal") {
+            showToast(`✅ Moved ${fmt(res.amount)} from Bank / InstaPay → Cash.`, "ok");
+          } else if (res.type === "Bank Deposit") {
+            showToast(`✅ Moved ${fmt(res.amount)} from Cash → Bank / InstaPay.`, "ok");
+          } else if (res.type === "CC Bill Payment") {
+            showToast(`✅ Logged ${fmt(res.amount)} NBE Card bill payment from ${res.wallet}.`, "ok");
+          } else if (res.type === "Income") {
+            showToast(`✅ Added ${fmt(res.amount)} income to ${res.wallet}.`, "ok");
+          } else if (res.catStatus && res.catStatus.severity === "over") {
             showToast(`🚨 Saved ${fmt(res.amount)}! ${res.category} is OVER BUDGET (${Math.round(res.catStatus.pct*100)}%).`, "danger");
           } else if (res.catStatus && (res.catStatus.severity === "warn" || res.catStatus.severity === "pace")) {
             showToast(`⚠️ Saved ${fmt(res.amount)}! ${res.category} at ${Math.round(res.catStatus.pct*100)}% (${fmt(res.catStatus.remaining)} left).`, "warn");

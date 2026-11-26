@@ -195,10 +195,11 @@ function apiLogTransaction(payload) {
   const isoDate = dObj ? formatDateIso(dObj) : Utilities.formatDate(new Date(), PF_CONFIG.TIMEZONE, "yyyy-MM-dd");
   const monthKey = isoDate.slice(0, 7);
 
-  const type = String(payload.type || "Expense").trim();
-  const category = String(payload.category || (type === "Income" ? "Salary / Income" : "Personal")).trim();
-  const wallet = String(payload.wallet || "Bank / InstaPay").trim();
-  const details = String(payload.details || "").trim();
+  const normalized = normalizeTransactionPayload(payload);
+  const type = normalized.type;
+  const category = normalized.category;
+  const wallet = normalized.wallet;
+  const details = normalized.details;
   const notes = String(payload.notes || "Logged via Quick Entry").trim();
   const sourceId = `APP-${Date.now()}`;
 
@@ -220,17 +221,24 @@ function apiLogTransaction(payload) {
   txSheet.getRange(nextRow, 6).setNumberFormat(PF_CONFIG.CURRENCY_FORMAT);
   SpreadsheetApp.flush();
 
-  const alertRes = checkAndSendBudgetAlerts(ss, monthKey, false);
-  const catStatus = (alertRes.statuses || []).find(s => s.category === category) || null;
+  let catStatus = null;
+  let alertTriggered = false;
+  if (normalized.affectsBudget) {
+    const alertRes = checkAndSendBudgetAlerts(ss, monthKey, false);
+    catStatus = (alertRes.statuses || []).find(s => s.category === category) || null;
+    alertTriggered = (alertRes.triggeredAlerts || []).length > 0;
+  }
   const state = apiGetDashboardState(payload.key, Boolean(payload.isSidebar));
 
   return {
     ok: true,
+    type,
+    wallet,
     amount,
     isoDate,
     category,
     catStatus,
-    alertTriggered: (alertRes.triggeredAlerts || []).length > 0,
+    alertTriggered,
     state
   };
 }

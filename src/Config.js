@@ -405,6 +405,60 @@ function computeWalletBalances(params) {
   };
 }
 
+function normalizeTransactionPayload(payload) {
+  const p = payload || {};
+  const validTypes = PF_CONFIG.TX_TYPES;
+  const rawType = String(p.type || "Expense").trim();
+  const type = validTypes.indexOf(rawType) !== -1 ? rawType : "Expense";
+  const rawCat = String(p.category || "").trim();
+  const rawWallet = String(p.wallet || "").trim();
+  const rawDetails = String(p.details || "").trim();
+
+  if (type === "Cash Withdrawal") {
+    return {
+      type,
+      category: "Transfer",
+      wallet: "Bank / InstaPay",
+      details: rawDetails || "ATM Cash Withdrawal",
+      affectsBudget: false
+    };
+  }
+  if (type === "Bank Deposit") {
+    return {
+      type,
+      category: "Transfer",
+      wallet: "Cash",
+      details: rawDetails || "Bank Cash Deposit",
+      affectsBudget: false
+    };
+  }
+  if (type === "CC Bill Payment") {
+    return {
+      type,
+      category: "Transfer",
+      wallet: rawWallet === "Cash" ? "Cash" : "Bank / InstaPay",
+      details: rawDetails || "NBE Credit Card Bill Payment",
+      affectsBudget: false
+    };
+  }
+  if (type === "Income") {
+    return {
+      type,
+      category: "Salary / Income",
+      wallet: rawWallet === "Cash" ? "Cash" : "Bank / InstaPay",
+      details: rawDetails || "Income",
+      affectsBudget: false
+    };
+  }
+  return {
+    type,
+    category: rawCat || "Personal",
+    wallet: rawWallet || "Bank / InstaPay",
+    details: rawDetails,
+    affectsBudget: true
+  };
+}
+
 function getMasterSpreadsheet_() {
   try {
     const active = (typeof SpreadsheetApp !== "undefined" && SpreadsheetApp.getActiveSpreadsheet)
@@ -436,6 +490,7 @@ if (typeof module !== "undefined" && module.exports) {
     normalizePersonName,
     categorizeDescription,
     computeWalletBalances,
+    normalizeTransactionPayload,
     getMasterSpreadsheet_,
     isValidWebAppKey
   };
