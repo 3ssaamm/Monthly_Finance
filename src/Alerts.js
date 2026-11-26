@@ -99,7 +99,7 @@ function readBudgetsConfigFromSheet_(ss) {
   return {
     alertEmail: String(settingsMap["Alert Email"] || PF_CONFIG.ALERT_EMAIL).trim(),
     targetSavings: Number(settingsMap["Target Monthly Savings (EGP)"] || 5000),
-    syncStartMonth: String(settingsMap["NBE Sync Start Month"] || PF_CONFIG.NBE_SYNC_START_MONTH).trim(),
+    syncStartMonth: toMonthKey(settingsMap["NBE Sync Start Month"], PF_CONFIG.TIMEZONE) || String(settingsMap["NBE Sync Start Month"] || PF_CONFIG.NBE_SYNC_START_MONTH).trim(),
     nbeCreditId: String(settingsMap["NBE Credit Card Sheet ID"] || PF_CONFIG.NBE_CREDIT_ID).trim(),
     fastPaceMargin: Number(settingsMap["Fast-Pace Margin %"] || 0.15),
     budgets: budgets.length ? budgets : PF_CONFIG.DEFAULT_BUDGETS,

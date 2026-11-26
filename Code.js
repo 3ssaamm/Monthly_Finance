@@ -8,6 +8,8 @@ function onOpen() {
     .addItem("📧 Email Mobile Link to My iPhone", "menuSendMobileLinkEmail")
     .addItem("🔑 Rotate Mobile Access Key", "menuRotateMobileKey")
     .addItem("⚖️ Sync Expected Bank/Cash to Actual", "menuReconcileWallets")
+    .addItem("👁️ Transactions: Active Month Only", "menuHideOldTransactionMonths")
+    .addItem("📂 Transactions: Show All Months", "menuShowAllTransactionMonths")
     .addItem("📱 Open Quick-Entry Sidebar", "showQuickEntrySidebar")
     .addItem("🔄 Sync NBE Credit Card V2", "menuSyncNbeCard")
     .addItem("🔔 Check Budget Alerts Now", "menuCheckBudgetAlerts")
@@ -52,13 +54,21 @@ function onEdit(e) {
         numCell.setFormula(`=IF(B${row}="","",ROW()-16)`);
       }
     }
-  } else if (name === PF_CONFIG.SHEETS.INVESTMENTS) {
+    } else if (name === PF_CONFIG.SHEETS.INVESTMENTS) {
     const row = e.range.getRow();
     if (row >= 13) {
       const numCell = sheet.getRange(row, 1);
       if (!numCell.getFormula()) {
         numCell.setFormula(`=IF(B${row}="","",ROW()-12)`);
       }
+    }
+  } else if (name === PF_CONFIG.SHEETS.DASHBOARD) {
+    const r = e.range.getRow();
+    const c = e.range.getColumn();
+    if (r === 3 && (c === 2 || c === 4)) {
+      try {
+        filterTransactionsToActiveMonth_(e.source, false);
+      } catch (_) {}
     }
   }
 }
@@ -140,6 +150,18 @@ function menuReconcileWallets() {
     `• Bank / InstaPay: EGP ${Number(res.targetBank || 0).toFixed(2)}\n` +
     `• Cash on Hand: EGP ${Number(res.targetCash || 0).toFixed(2)}`
   );
+}
+
+function menuHideOldTransactionMonths() {
+  const res = filterTransactionsToActiveMonth_(SpreadsheetApp.getActiveSpreadsheet(), false);
+  SpreadsheetApp.getUi().alert(
+    `👁️ Transactions filtered to ${res.activeMonthKey}.\nHidden ${res.hiddenCount} row(s) from older months.`
+  );
+}
+
+function menuShowAllTransactionMonths() {
+  filterTransactionsToActiveMonth_(SpreadsheetApp.getActiveSpreadsheet(), true);
+  SpreadsheetApp.getUi().alert("📂 All months are now visible in Transactions.");
 }
 
 function menuShowWebAppInfo() {

@@ -658,3 +658,55 @@ function setupYearlySheet_(sheet) {
   sheet.insertChart(c2);
   sheet.insertChart(c3);
 }
+
+function filterTransactionsToActiveMonth_(optSs, showAll) {
+  const ss = optSs || getMasterSpreadsheet_();
+  const txSheet = ss.getSheetByName(PF_CONFIG.SHEETS.TRANSACTIONS);
+  if (!txSheet) return { activeMonthKey: "", hiddenCount: 0 };
+
+  const dash = ss.getSheetByName(PF_CONFIG.SHEETS.DASHBOARD);
+  const currentMonthKey = Utilities.formatDate(new Date(), PF_CONFIG.TIMEZONE, "yyyy-MM");
+  const activeMonthKey = (dash ? String(dash.getRange("G3").getDisplayValue() || "").trim() : "") || currentMonthKey;
+
+  const maxRows = txSheet.getMaxRows();
+  if (maxRows > 1) {
+    txSheet.showRows(2, maxRows - 1);
+  }
+  if (showAll === true) {
+    return { activeMonthKey, hiddenCount: 0 };
+  }
+
+  const lastRow = txSheet.getLastRow();
+  if (lastRow < 2) return { activeMonthKey, hiddenCount: 0 };
+
+  const vals = txSheet.getRange(2, 2, lastRow - 1, 2).getDisplayValues();
+  let hiddenCount = 0;
+  let runStart = -1;
+  let runLen = 0;
+
+  for (let i = 0; i < vals.length; i++) {
+    const dateVal = String(vals[i][0] || "").trim();
+    const mKey = String(vals[i][1] || "").trim();
+    const shouldHide = Boolean(dateVal && mKey && mKey !== activeMonthKey);
+    const sheetRow = 2 + i;
+
+    if (shouldHide) {
+      if (runStart === -1) {
+        runStart = sheetRow;
+        runLen = 1;
+      } else {
+        runLen++;
+      }
+      hiddenCount++;
+    } else if (runStart !== -1) {
+      txSheet.hideRows(runStart, runLen);
+      runStart = -1;
+      runLen = 0;
+    }
+  }
+  if (runStart !== -1) {
+    txSheet.hideRows(runStart, runLen);
+  }
+
+  return { activeMonthKey, hiddenCount };
+}

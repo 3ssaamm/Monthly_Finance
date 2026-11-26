@@ -75,4 +75,33 @@ assert.strictEqual(synced[0].sourceId, "NBE-TX-T-00350");
 assert.strictEqual(synced[0].category, "Food");
 assert.strictEqual(synced[0].wallet, "NBE Credit Card");
 
-console.log("23 assertions passed (NBE sync & migration).");
+// 5. Regression test: Date object / serial NBE Sync Start Month still syncs current-month items
+const syncedWithDateStart = buildMidoNbeSyncRows({
+  txRows: [
+    ["#", "Date", "Desc", "Payer", "Amount", "", "_Row_ID"],
+    ["376", "Thursday, November 26, 2026", "Amazon (coffee)", "Mido", 206.99, "", "T-00378"]
+  ],
+  instRows: [],
+  existingSourceIds: new Set(),
+  syncStartMonth: new Date(Date.UTC(2026, 10, 1, 12, 0, 0)),
+  activeCycleMonthKey: "2026-11"
+});
+assert.strictEqual(syncedWithDateStart.length, 1);
+assert.strictEqual(syncedWithDateStart[0].sourceId, "NBE-TX-T-00378");
+assert.strictEqual(syncedWithDateStart[0].category, "Food");
+assert.strictEqual(syncedWithDateStart[0].amount, 206.99);
+assert.strictEqual(syncedWithDateStart[0].wallet, "NBE Credit Card");
+
+const syncedWithSerialStart = buildMidoNbeSyncRows({
+  txRows: [
+    ["#", "Date", "Desc", "Payer", "Amount", "", "_Row_ID"],
+    ["376", "Thursday, November 26, 2026", "Amazon (coffee)", "Mido", 206.99, "", "T-00378"]
+  ],
+  instRows: [],
+  existingSourceIds: new Set(),
+  syncStartMonth: 46327,
+  activeCycleMonthKey: "2026-11"
+});
+assert.strictEqual(syncedWithSerialStart.length, 1);
+
+console.log("29 assertions passed (NBE sync & migration).");

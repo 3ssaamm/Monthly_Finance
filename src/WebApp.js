@@ -237,8 +237,7 @@ function apiLogTransaction(payload) {
   const notes = String(payload.notes || "Logged via Quick Entry").trim();
   const sourceId = `APP-${Date.now()}`;
 
-  const lastRow = Math.max(1, txSheet.getLastRow());
-  const nextRow = lastRow + 1;
+  const nextRow = getNextEmptyLedgerRow_(txSheet, 2, 2);
   txSheet.getRange(nextRow, 1, 1, 10).setValues([[
     `=IF(B${nextRow}="","",ROW()-1)`,
     isoDate,
@@ -302,7 +301,7 @@ function apiLogLoan(payload) {
   const notes = String(payload.notes || "Logged via Quick Entry").trim();
   const loanId = `APP-LOAN-${Date.now()}`;
 
-  const nextRow = Math.max(17, loanSheet.getLastRow() + 1);
+  const nextRow = getNextEmptyLedgerRow_(loanSheet, 2, 17);
   loanSheet.getRange(nextRow, 1, 1, 8).setValues([[
     `=IF(B${nextRow}="","",ROW()-16)`,
     isoDate,

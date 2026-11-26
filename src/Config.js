@@ -504,6 +504,19 @@ function computeCalibratedAnchor(currentAnchor, currentExpected, targetActual) {
   return Math.round((Number(currentAnchor || 0) + diff) * 100) / 100;
 }
 
+function getNextEmptyLedgerRow_(sheet, dateCol, minRow) {
+  const start = minRow || 2;
+  const col = dateCol || 2;
+  const lastRow = Math.max(start, sheet.getLastRow());
+  const vals = sheet.getRange(start, col, lastRow - start + 1, 1).getValues();
+  for (let i = 0; i < vals.length; i++) {
+    if (String(vals[i][0] === null || vals[i][0] === undefined ? "" : vals[i][0]).trim() === "") {
+      return start + i;
+    }
+  }
+  return lastRow + 1;
+}
+
 function getMasterSpreadsheet_() {
   try {
     const active = (typeof SpreadsheetApp !== "undefined" && SpreadsheetApp.getActiveSpreadsheet)
@@ -540,6 +553,7 @@ if (typeof module !== "undefined" && module.exports) {
     normalizeTransactionPayload,
     computeRemainingCardDue,
     computeCalibratedAnchor,
+    getNextEmptyLedgerRow_,
     getMasterSpreadsheet_,
     isValidWebAppKey
   };

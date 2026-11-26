@@ -91,7 +91,7 @@ function buildMidoNbeSyncRows(params) {
   const txRows = params.txRows || [];
   const instRows = params.instRows || [];
   const existingSourceIds = params.existingSourceIds || new Set();
-  const syncStartMonth = String(params.syncStartMonth || "2026-11").trim();
+  const syncStartMonth = toMonthKey(params.syncStartMonth, PF_CONFIG.TIMEZONE) || String(params.syncStartMonth || "2026-11").trim();
   const rules = params.rules || PF_CONFIG.DEFAULT_CATEGORY_RULES;
   const activeCycleMonthKey = params.activeCycleMonthKey || syncStartMonth;
 
@@ -239,7 +239,7 @@ function syncFromNbeCreditCard(optSs) {
   });
 
   if (toAppend.length > 0 && txSheet) {
-    const startRow = Math.max(2, txSheet.getLastRow() + 1);
+    const startRow = getNextEmptyLedgerRow_(txSheet, 2, 2);
     const out = toAppend.map((item, idx) => {
       const r = startRow + idx;
       return [
